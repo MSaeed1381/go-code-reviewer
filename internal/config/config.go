@@ -6,15 +6,21 @@ import (
 )
 
 type Config struct {
-	Env       string           `yaml:"env" json:"env"`
-	LLM       LLMSection       `yaml:"llm" json:"llm"`
-	Embedding EmbeddingSection `yaml:"embedding" json:"embedding"`
-	Tasks     TasksSection     `yaml:"tasks" json:"tasks"`
-	ChromaDB  ChromaDBSection  `yaml:"chroma_db" json:"chroma_db"`
+	Env        string           `yaml:"env" json:"env"`
+	HttpServer HttpServer       `yaml:"http_server" json:"http_server"`
+	LLM        LLMSection       `yaml:"llm" json:"llm"`
+	Embedding  EmbeddingSection `yaml:"embedding" json:"embedding"`
+	Tasks      TasksSection     `yaml:"tasks" json:"tasks"`
+	ChromaDB   ChromaDBSection  `yaml:"chroma_db" json:"chroma_db"`
+}
+
+type HttpServer struct {
+	Address string `yaml:"address" json:"address"`
 }
 
 type ChromaDBSection struct {
-	Address string `yaml:"address"`
+	Address        string `yaml:"address"`
+	CollectionName string `yaml:"collection_name" json:"collection_name"`
 }
 
 type LLMSection struct {

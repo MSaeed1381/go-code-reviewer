@@ -1,4 +1,6 @@
 evn: "development"
+http_server:
+  address: ":8080"
 llm:
   api_base_url: "https://api.metisai.ir/openai/v1"
   model: "gpt-4.1-mini"
@@ -11,6 +13,7 @@ embedding:
 
 chroma_db:
   address: "http://localhost:8000"
+  collection_name: "coderag"
 
 tasks:
   detect_language:

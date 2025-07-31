@@ -1,9 +1,10 @@
 package main
 
-import "go_code_reviewer/internal"
+import (
+	"go_code_reviewer/internal"
+	"go_code_reviewer/pkg/app"
+)
 
 func main() {
-	service := internal.Service{}
-	service.Start()
-	service.Close()
+	app.RunService(&internal.Service{})
 }

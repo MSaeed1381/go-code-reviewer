@@ -2,15 +2,15 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"go_code_reviewer/internal/modules"
+	"go_code_reviewer/internal/code_reviewer"
 	"net/http"
 )
 
 type Handler struct {
-	module *modules.Module
+	module *code_reviewer.Module
 }
 
-func NewHandler(module *modules.Module) *Handler {
+func NewHandler(module *code_reviewer.Module) *Handler {
 	return &Handler{
 		module: module,
 	}
