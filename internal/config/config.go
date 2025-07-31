@@ -1,0 +1,79 @@
+package config
+
+import (
+	"gopkg.in/yaml.v3"
+	"os"
+)
+
+type Config struct {
+	Env       string           `yaml:"env" json:"env"`
+	LLM       LLMSection       `yaml:"llm" json:"llm"`
+	Embedding EmbeddingSection `yaml:"embedding" json:"embedding"`
+	Tasks     TasksSection     `yaml:"tasks" json:"tasks"`
+	ChromaDB  ChromaDBSection  `yaml:"chroma_db" json:"chroma_db"`
+}
+
+type ChromaDBSection struct {
+	Address string `yaml:"address"`
+}
+
+type LLMSection struct {
+	APIBaseURL  string  `yaml:"api_base_url"`
+	OpenApiKey  string  `yaml:"openapi_key"`
+	Model       string  `yaml:"model"`
+	Temperature float32 `yaml:"temperature"`
+	MaxTokens   int     `yaml:"max_tokens"`
+}
+
+type EmbeddingSection struct {
+	APIBaseURL string `yaml:"api_base_url"`
+	Model      string `yaml:"model"`
+}
+
+type TasksSection struct {
+	DetectLanguage DetectLanguage `yaml:"detect_language"`
+	CodeReview     TaskConfig     `yaml:"code_review"`
+	CodeCompletion TaskConfig     `yaml:"code_completion"`
+	CodeGeneration TaskConfig     `yaml:"code_generation"`
+}
+
+type Model struct {
+	Name        string  `yaml:"name"`
+	Temperature float32 `yaml:"temperature"`
+	MaxTokens   int     `yaml:"max_tokens"`
+	Prefix      string  `yaml:"prefix"`
+}
+
+type TaskConfig struct {
+	Model   Model         `yaml:"model"`
+	Prompts PromptSection `yaml:"prompts"`
+}
+
+type PromptSection struct {
+	ZeroShot string `yaml:"zero_shot"`
+}
+
+type DetectLanguage struct {
+	Contextual      string `yaml:"contextual"`
+	NaturalLanguage string `yaml:"natural_language"`
+}
+
+func LoadConfig(path string) (*Config, error) {
+	config := &Config{
+		LLM: LLMSection{
+			OpenApiKey: os.Getenv("LLM_OPEN_API_KEY"),
+		},
+	}
+
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	err = yaml.Unmarshal(file, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}

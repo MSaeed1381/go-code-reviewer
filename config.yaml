@@ -1,0 +1,134 @@
+evn: "development"
+llm:
+  api_base_url: "https://api.metisai.ir/openai/v1"
+  model: "gpt-4.1-mini"
+  temperature: 0.2
+  max_tokens: 256
+
+embedding:
+  api_base_url: "https://api.metisai.ir/openai/v1"
+  model: "text-embedding-3-small"
+
+chroma_db:
+  address: "http://localhost:8000"
+
+tasks:
+  detect_language:
+    contextual: >
+      You are an elite programmer who knows syntax to multiple programming language.
+      You are provided with a code snippet encapsulated by back-ticks (```).
+      You are tasked to identify in what programming language out of python, java, golang the code snippet belongs to.
+      Only give the name of the language and nothing else in the output.
+      ```
+      {text}
+      ```
+
+    natural_language: >
+      Given a piece of natural language text, determine if any of the programming languages "go", "java", or "python" is mentioned.
+      ### Text:
+      {text}
+
+      If it's not evident from the text, the output should strictly be one of: go, java, python, or None
+
+
+  code_review:
+    model:
+      name: "gpt-4.1-mini"
+      temperature: 0.2
+      max_tokens: 4096
+      prefix: ""
+    prompts:
+      zero_shot: >
+        You are an expert code reviewer.
+        Review the following git diff and provide improvements.
+        Focus on code quality, readability, and adherence to best practices.
+        Only provide code snippets if necessary.
+        Follow the language's code conventions.
+        Make feedback personal and show gratitude to the author using "@" when tagging.
+
+        ### Git Diff:
+        {text}
+
+        ### Context:
+        {context}
+
+
+  code_completion:
+    model:
+      name: "gpt-4.1-mini"
+      temperature: 0
+      max_tokens: 4096
+      prefix: ""
+    prompts:
+      zero_shot: >
+        You are an expert programmer.
+        You will fill in the hole in a snippet of given code.
+
+        Considering ### Task, respond with code that works in an IDE only.
+        Respond only with {language} code.
+        Include code comments explaining what steps you are taking.
+
+        Do not use any textual explanations.
+        Do not return Markdown.
+        Do not emit ```{language}
+        Do not emit ```
+
+        ### Task
+        Complete the snippet below by replacing [HOLE] based on context with only the code necessary to replace [HOLE].
+        Do not repeat any code that prefixes [HOLE].
+        The code to complete: \n
+
+        ```
+
+        {text}
+
+        ```
+
+        Reference this code snippet as context when completing the ### Task.
+
+        ### Context: \n
+
+        ```
+
+        {context}
+
+        ```
+
+        Note: Please include necessary library imports. Ensure that all used variables and arguments are available.
+
+
+  code_generation:
+    model:
+      name: "gpt-4.1-mini"
+      temperature: 0.1
+      max_tokens: 4096
+      prefix: ""
+    prompts:
+      zero_shot: >
+        Consider yourself a highly skilled programming expert with a deep understanding of various programming languages and paradigms.
+        Your current task is to provide the most efficient and elegant code solution possible for the given user query.
+        Leverage any provided context code if relevant, or seamlessly craft new code when necessary.
+
+        ###User_Query: \n
+
+        ```
+
+        {text}
+
+        ```
+
+        ###Context_Code: \n
+
+        ```
+
+        {context}
+
+        ```
+
+        Instructions:
+        1. Carefully understand the programming task described in the ###User_Query.
+        2. Thoroughly assess the Context Code. Determine if it contains functions, structures, or logic that directly align with the ###User_Query.
+        3. If the ###Context_Code contains a function or class that already implements the desired functionality, your task is to use that function or class directly in your generated code.
+           Do not create new implementations unless necessary.
+        4. If the ###Context_Code has helpful parts that you can modify for the task, adapt and use those parts in your solution.
+        5. If the ###Context_Code is irrelevant or insufficient, generate a new, complete code solution from scratch that fulfills the User Query.

@@ -1,0 +1,64 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output of the go coverage tool
+*.coverprofile
+
+# Logs and debug
+*.log
+
+# Dependency directories (vendor/)
+vendor/
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+
+# Compiled object files
+*.o
+*.a
+
+# Local dev tools
+.env
+.env.*
+*.local
+*.secret
+
+# Gopls workspace files
+.gopls.*
+
+# GoReleaser dist output
+dist/
+
+# Mockgen output (if you generate mocks to a specific dir, ignore it)
+mocks/
+mock_*
+
+# Coverage output
+coverage.*
+*.lcov
+
+# Custom build directories
+bin/
+build/
+
+# Static analysis tools
+staticcheck.conf
+
+# JetBrains IDE project files
+*.iml
+
+Code-Review-Demo
