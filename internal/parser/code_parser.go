@@ -2,7 +2,7 @@ package parser
 
 import (
 	"context"
-	"log"
+	"go_code_reviewer/pkg/log"
 
 	"github.com/google/uuid"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -44,35 +44,27 @@ func (p *CodeParser) isTargetType(nodeType string) bool {
 }
 
 func (p *CodeParser) ParseFile(ctx context.Context, content []byte, filename string) []*Snippet {
+	logger := log.GetLogger()
 	parser := sitter.NewParser()
 	parser.SetLanguage(p.language)
 
 	tree, err := parser.ParseCtx(ctx, nil, content)
 	if err != nil {
-		log.Printf("Error parsing file %s: %v", filename, err)
+		logger.WithError(err).Error("fail to parse code content")
 		return nil
 	}
 
 	cursor := sitter.NewTreeCursor(tree.RootNode())
-	snippets := []*Snippet{
-		{
-			ID:       uuid.New().String(),
-			Content:  cursor.CurrentNode().Content(content),
-			Filename: filename,
-			Language: string(p.langString),
-		},
+	var snippets []*Snippet
+	if p.isTargetType(cursor.CurrentNode().Type()) {
+		snippets = append(snippets, NewSnippet(uuid.New().String(), cursor.CurrentNode().Content(content), filename, p.langString))
 	}
 
 	if cursor.GoToFirstChild() {
 		for {
 			node := cursor.CurrentNode()
 			if p.isTargetType(node.Type()) {
-				snippets = append(snippets, &Snippet{
-					ID:       uuid.New().String(),
-					Content:  node.Content(content),
-					Filename: filename,
-					Language: string(p.langString),
-				})
+				snippets = append(snippets, NewSnippet(uuid.New().String(), node.Content(content), filename, p.langString))
 			}
 			if !cursor.GoToNextSibling() {
 				break
@@ -81,8 +73,4 @@ func (p *CodeParser) ParseFile(ctx context.Context, content []byte, filename str
 	}
 
 	return snippets
-}
-
-type ProjectParser struct {
-	parsers map[string]*CodeParser
 }

@@ -1,14 +1,11 @@
 package api
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 type WebhookRequest struct {
-	Query  string `json:"query" form:"query"`
-	Indent string `json:"indent" form:"indent"`
+	Query string `json:"query" form:"query" binding:"required"`
 }
 
 func (h *Handler) webhook(c *gin.Context) {
@@ -18,23 +15,11 @@ func (h *Handler) webhook(c *gin.Context) {
 		return
 	}
 
-	if req.Query == "" || req.Indent == "" {
-		fmt.Println(req.Query)
-		fmt.Println(req.Indent)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "query or body is empty"})
+	review, err := h.module.ReviewCode(c, req.Query)
+	if err != nil {
+		h.handleErrorApiResponse(c, err, "failed to review code")
 		return
 	}
 
-	review, err := h.module.ReviewCode(c, req.Query, req.Indent)
-	if err != nil { // TODO: map error
-		c.JSONP(http.StatusBadRequest, gin.H{})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code": http.StatusOK,
-		"data": gin.H{
-			"review": review,
-		},
-	})
+	h.handleSuccessfulApiResponse(c, review)
 }
