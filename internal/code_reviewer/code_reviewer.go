@@ -2,9 +2,9 @@ package code_reviewer
 
 import (
 	"context"
-	"errors"
 	"go_code_reviewer/internal/assistant"
 	"go_code_reviewer/internal/embedder"
+	"go_code_reviewer/internal/errors"
 	"go_code_reviewer/internal/parser"
 	"go_code_reviewer/pkg/log"
 )
@@ -23,22 +23,17 @@ func NewModule(projectParser *parser.ProjectParser, projectEmbedder *embedder.Pr
 	}
 }
 
-func (m *Module) ReviewCode(ctx context.Context, query, indent string) (string, error) {
+func (m *Module) ReviewCode(ctx context.Context, query string) (string, error) {
 	logger := log.GetLogger()
-	snippets, err := m.projectParser.ParseProject(ctx, "./Code-Review-Demo")
+	snippets, err := m.projectParser.ParseProject(ctx, "./Code-Review-Demo") // TODO: download project
 	if err != nil {
-		logger.WithError(err).Error("Failed to parse project")
+		logger.WithError(err).Error("failed to parse project")
 		return "", err
 	}
 
-	for _, snippet := range snippets {
-		logger.Info("Snippet: %v", snippet)
-		logger.Info("--------------------------")
-	}
-
 	if len(snippets) == 0 {
-		logger.Error("No snippets found")
-		return "", errors.New("no snippets found")
+		logger.Error("no snippets found")
+		return "", errors.ErrNoSnippetFound
 	}
 
 	err = m.projectEmbedder.EmbedProject(ctx, snippets)
@@ -47,9 +42,9 @@ func (m *Module) ReviewCode(ctx context.Context, query, indent string) (string, 
 		return "", err
 	}
 
-	finalResponse, err := m.codeAssistant.PerformCodingTask(context.Background(), indent, query)
+	finalResponse, err := m.codeAssistant.PerformTask(ctx, assistant.TaskCodeReview, query)
 	if err != nil {
-		logger.WithError(err).Error("Failed to perform coding task")
+		logger.WithError(err).Error("failed to perform coding task")
 		return "", err
 	}
 

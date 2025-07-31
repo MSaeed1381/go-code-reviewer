@@ -44,7 +44,10 @@ func (s *Service) Start() {
 		logger.WithError(err).Fatal("failed to connect to services")
 	}
 
-	projectParser := parser.NewProjectParser()
+	projectParser := parser.NewProjectParser(map[string]*parser.CodeParser{
+		".py": parser.NewCodeParser(parser.LanguagePython),
+		".go": parser.NewCodeParser(parser.LanguageGo),
+	})
 	projectEmbedder := embedder.NewProjectEmbedder(s.embeddingClient, s.chromaCollection, openai.EmbeddingModel(serviceConfig.Embedding.Model))
 	codeAssistant := assistant.NewAssistant(serviceConfig, s.chromaCollection, s.llmClient)
 	codeReviewerModule := code_reviewer.NewModule(projectParser, projectEmbedder, codeAssistant)

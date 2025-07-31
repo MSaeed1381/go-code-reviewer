@@ -2,24 +2,25 @@ package parser
 
 import (
 	"context"
-	"log"
+	"go_code_reviewer/pkg/log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-func NewProjectParser() *ProjectParser {
+type ProjectParser struct {
+	parsers map[string]*CodeParser
+}
+
+func NewProjectParser(parsers map[string]*CodeParser) *ProjectParser {
 	return &ProjectParser{
-		parsers: map[string]*CodeParser{
-			".py": NewCodeParser(LanguagePython),
-			".go": NewCodeParser(LanguageGo),
-		},
+		parsers: parsers,
 	}
 }
 
 func (pp *ProjectParser) ParseProject(ctx context.Context, rootPath string) ([]*Snippet, error) {
+	logger := log.GetLogger()
 	var allSnippets []*Snippet
-
 	err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -30,22 +31,19 @@ func (pp *ProjectParser) ParseProject(ctx context.Context, rootPath string) ([]*
 
 		ext := strings.ToLower(filepath.Ext(path))
 		if parser, supported := pp.parsers[ext]; supported {
-			log.Printf("Processing file: %s", path)
 			content, readErr := os.ReadFile(path)
 			if readErr != nil {
-				log.Printf("Failed to read file %s: %v", path, readErr)
-				return nil
+				return readErr
 			}
 			fileSnippets := parser.ParseFile(ctx, content, path)
 			allSnippets = append(allSnippets, fileSnippets...)
 		}
 		return nil
 	})
-
 	if err != nil {
+		logger.WithError(err).Error("failed to walk project")
 		return nil, err
 	}
 
-	log.Printf("Total snippets parsed: %d", len(allSnippets))
 	return allSnippets, nil
 }
