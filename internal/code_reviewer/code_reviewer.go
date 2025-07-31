@@ -1,4 +1,4 @@
-package modules
+package code_reviewer
 
 import (
 	"context"
