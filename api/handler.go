@@ -2,17 +2,23 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/go-github/v58/github"
 	"go_code_reviewer/internal/code_reviewer"
+	"go_code_reviewer/internal/config"
 	"net/http"
 )
 
 type Handler struct {
-	module *code_reviewer.Module
+	config                *config.Config
+	module                *code_reviewer.Module
+	pullRequestEventQueue chan *github.PullRequestEvent
 }
 
-func NewHandler(module *code_reviewer.Module) *Handler {
+func NewHandler(config *config.Config, module *code_reviewer.Module, pullRequestEventQueue chan *github.PullRequestEvent) *Handler {
 	return &Handler{
-		module: module,
+		config:                config,
+		module:                module,
+		pullRequestEventQueue: pullRequestEventQueue,
 	}
 }
 

@@ -2,24 +2,28 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/go-github/v58/github"
 )
 
-type WebhookRequest struct {
-	Query string `json:"query" form:"query" binding:"required"`
-}
-
 func (h *Handler) webhook(c *gin.Context) {
-	req := WebhookRequest{}
-	err := c.ShouldBind(&req)
+	payload, err := github.ValidatePayload(c.Request, []byte(h.config.Github.WebhookSecret))
 	if err != nil {
+		h.handleErrorApiResponse(c, err, "failed to validate payload")
 		return
 	}
 
-	review, err := h.module.ReviewCode(c, req.Query)
+	event, err := github.ParseWebHook(github.WebHookType(c.Request), payload)
 	if err != nil {
-		h.handleErrorApiResponse(c, err, "failed to review code")
+		h.handleErrorApiResponse(c, err, "failed to parse webhook")
 		return
 	}
 
-	h.handleSuccessfulApiResponse(c, review)
+	switch e := event.(type) {
+	case *github.PullRequestEvent:
+		h.pullRequestEventQueue <- e
+		h.handleSuccessfulApiResponse(c, "received pull request event")
+		return
+	}
+
+	h.handleSuccessfulApiResponse(c, "event not found")
 }
