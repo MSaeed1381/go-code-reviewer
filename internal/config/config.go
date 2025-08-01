@@ -12,6 +12,12 @@ type Config struct {
 	Embedding  EmbeddingSection `yaml:"embedding" json:"embedding"`
 	Tasks      TasksSection     `yaml:"tasks" json:"tasks"`
 	ChromaDB   ChromaDBSection  `yaml:"chroma_db" json:"chroma_db"`
+	Github     GithubSection    `yaml:"github" json:"github"`
+}
+
+type GithubSection struct {
+	WebhookSecret string `yaml:"webhook_secret" json:"webhook_secret"`
+	AccessToken   string `yaml:"access_token" json:"access_token"`
 }
 
 type HttpServer struct {
@@ -68,6 +74,10 @@ func LoadConfig(path string) (*Config, error) {
 	config := &Config{
 		LLM: LLMSection{
 			OpenApiKey: os.Getenv("LLM_OPEN_API_KEY"),
+		},
+		Github: GithubSection{
+			WebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
+			AccessToken:   os.Getenv("GITHUB_ACCESS_TOKEN"),
 		},
 	}
 

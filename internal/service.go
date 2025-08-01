@@ -5,6 +5,7 @@ import (
 	"errors"
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	openaiembedder "github.com/amikos-tech/chroma-go/pkg/embeddings/openai"
+	"github.com/google/go-github/v58/github"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sirupsen/logrus"
 	"go_code_reviewer/api"
@@ -14,6 +15,7 @@ import (
 	"go_code_reviewer/internal/embedder"
 	"go_code_reviewer/internal/parser"
 	"go_code_reviewer/pkg/log"
+	"golang.org/x/oauth2"
 	"net/http"
 	"time"
 )
@@ -23,6 +25,7 @@ type Service struct {
 	embeddingClient  *openai.Client
 	llmClient        *openai.Client
 	chromaCollection chroma.Collection
+	githubClient     *github.Client
 }
 
 func (s *Service) Start() {
@@ -48,11 +51,14 @@ func (s *Service) Start() {
 		".py": parser.NewCodeParser(parser.LanguagePython),
 		".go": parser.NewCodeParser(parser.LanguageGo),
 	})
+
+	pullRequestEventChannel := make(chan *github.PullRequestEvent)
 	projectEmbedder := embedder.NewProjectEmbedder(s.embeddingClient, s.chromaCollection, openai.EmbeddingModel(serviceConfig.Embedding.Model))
 	codeAssistant := assistant.NewAssistant(serviceConfig, s.chromaCollection, s.llmClient)
-	codeReviewerModule := code_reviewer.NewModule(projectParser, projectEmbedder, codeAssistant)
+	codeReviewerModule := code_reviewer.NewModule(projectParser, projectEmbedder, codeAssistant, pullRequestEventChannel, s.githubClient)
+	go codeReviewerModule.Start()
 
-	handler := api.NewHandler(codeReviewerModule)
+	handler := api.NewHandler(serviceConfig, codeReviewerModule, pullRequestEventChannel)
 	r := handler.RegisterRoutes()
 	s.httpServer = &http.Server{
 		Addr:    serviceConfig.HttpServer.Address,
@@ -111,6 +117,11 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 		return err
 	}
 	s.chromaCollection = chromaCollection
+
+	// connect to github
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: serviceConfig.Github.AccessToken})
+	tc := oauth2.NewClient(context.Background(), ts)
+	s.githubClient = github.NewClient(tc)
 
 	return nil
 }

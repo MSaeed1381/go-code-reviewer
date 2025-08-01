@@ -5,10 +5,12 @@ go 1.24.2
 require (
 	github.com/amikos-tech/chroma-go v0.2.3
 	github.com/gin-gonic/gin v1.10.1
+	github.com/google/go-github/v58 v58.0.0
 	github.com/google/uuid v1.6.0
 	github.com/sashabaranov/go-openai v1.40.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
+	golang.org/x/oauth2 v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -24,6 +26,7 @@ require (
 	github.com/go-playground/validator/v10 v10.22.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
