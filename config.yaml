@@ -23,13 +23,13 @@ tasks:
       You are tasked to identify in what programming language out of python, java, golang the code snippet belongs to.
       Only give the name of the language and nothing else in the output.
       ```
-      {text}
+      {{.text}}
       ```
 
     natural_language: >
       Given a piece of natural language text, determine if any of the programming languages "go", "java", or "python" is mentioned.
       ### Text:
-      {text}
+      {{.text}}
 
       If it's not evident from the text, the output should strictly be one of: go, java, python, or None
 
@@ -50,10 +50,10 @@ tasks:
         Make feedback personal and show gratitude to the author using "@" when tagging.
 
         ### Git Diff:
-        {text}
+        {{.text}}
 
         ### Context:
-        {context}
+        {{.context}}
 
 
   code_completion:
@@ -83,7 +83,7 @@ tasks:
 
         ```
 
-        {text}
+        {{.text}}
 
         ```
 
@@ -93,7 +93,7 @@ tasks:
 
         ```
 
-        {context}
+        {{.context}}
 
         ```
 
@@ -116,7 +116,7 @@ tasks:
 
         ```
 
-        {text}
+        {{.text}}
 
         ```
 
@@ -124,7 +124,7 @@ tasks:
 
         ```
 
-        {context}
+        {{.context}}
 
         ```
 

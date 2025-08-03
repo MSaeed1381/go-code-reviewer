@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-github/v58/github"
+	"go_code_reviewer/internal/vsc"
 )
 
 func (h *Handler) webhook(c *gin.Context) {
@@ -20,7 +21,7 @@ func (h *Handler) webhook(c *gin.Context) {
 
 	switch e := event.(type) {
 	case *github.PullRequestEvent:
-		h.pullRequestEventQueue <- e
+		h.pullRequestEventQueue <- vsc.ConvertGitHubEvent(e)
 		h.handleSuccessfulApiResponse(c, "received pull request event")
 		return
 	}
