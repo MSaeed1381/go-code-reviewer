@@ -2,30 +2,29 @@ package code_reviewer
 
 import (
 	"context"
-	"github.com/google/go-github/v58/github"
 	"go_code_reviewer/internal/assistant"
 	"go_code_reviewer/internal/embedder"
 	"go_code_reviewer/internal/errors"
 	"go_code_reviewer/internal/parser"
+	"go_code_reviewer/internal/vsc"
 	"go_code_reviewer/pkg/log"
-	"strings"
 )
 
 type Module struct {
 	projectParser         *parser.ProjectParser
 	projectEmbedder       *embedder.ProjectEmbedder
 	codeAssistant         *assistant.Assistant
-	pullRequestEventQueue chan *github.PullRequestEvent
-	githubClient          *github.Client
+	versionControl        vsc.VersionControlSystem
+	pullRequestEventQueue chan *vsc.PullRequestEvent
 }
 
-func NewModule(projectParser *parser.ProjectParser, projectEmbedder *embedder.ProjectEmbedder, codeAssistant *assistant.Assistant, pullRequestEventQueue chan *github.PullRequestEvent, githubClient *github.Client) *Module {
+func NewModule(projectParser *parser.ProjectParser, projectEmbedder *embedder.ProjectEmbedder, codeAssistant *assistant.Assistant, pullRequestEventQueue chan *vsc.PullRequestEvent, versionControl vsc.VersionControlSystem) *Module {
 	return &Module{
 		projectParser:         projectParser,
 		projectEmbedder:       projectEmbedder,
 		codeAssistant:         codeAssistant,
 		pullRequestEventQueue: pullRequestEventQueue,
-		githubClient:          githubClient,
+		versionControl:        versionControl,
 	}
 }
 
@@ -36,20 +35,14 @@ func (m *Module) Start() {
 	for {
 		select {
 		case prEvent := <-m.pullRequestEventQueue:
+			logger.WithField("number", prEvent.Number).Info("Received pull request event")
 			review, err := m.reviewCode(ctx, prEvent)
 			if err != nil {
 				logger.WithError(err).Error("review code error")
 				return
 			}
 
-			parts := strings.Split(prEvent.GetRepo().GetFullName(), "/")
-			if len(parts) != 2 {
-				logger.Error("invalid full name")
-				return
-			}
-
-			owner, repo := parts[0], parts[1]
-			if err = m.postPRComment(ctx, prEvent.GetNumber(), review, owner, repo); err != nil {
+			if err = m.versionControl.PostPRComment(ctx, prEvent.Number, review, prEvent.Owner, prEvent.Repo); err != nil {
 				logger.WithError(err).Error("post pr comment error")
 				return
 			}
@@ -57,15 +50,16 @@ func (m *Module) Start() {
 	}
 }
 
-func (m *Module) reviewCode(ctx context.Context, event *github.PullRequestEvent) (string, error) {
+func (m *Module) reviewCode(ctx context.Context, event *vsc.PullRequestEvent) (string, error) {
 	logger := log.GetLogger()
-	project, err := CloneProject(event.GetRepo().GetCloneURL(), event.GetPullRequest().GetHead().GetRef())
+	repoPath, cleanup, err := m.versionControl.Clone(ctx, event.CloneURL, event.Branch)
 	if err != nil {
 		logger.WithError(err).Error("failed to clone project")
 		return "", err
 	}
+	defer cleanup()
 
-	snippets, err := m.projectParser.ParseProject(ctx, project.RepoPath)
+	snippets, err := m.projectParser.ParseProject(ctx, repoPath)
 	if err != nil {
 		logger.WithError(err).Error("failed to parse project")
 		return "", err
@@ -82,7 +76,7 @@ func (m *Module) reviewCode(ctx context.Context, event *github.PullRequestEvent)
 		return "", err
 	}
 
-	diff, err := downloadUrl(event.GetPullRequest().GetDiffURL())
+	diff, err := m.versionControl.DownloadUrl(ctx, event.DiffURL)
 	if err != nil {
 		logger.WithError(err).Error("failed to download url")
 		return "", err
@@ -95,13 +89,4 @@ func (m *Module) reviewCode(ctx context.Context, event *github.PullRequestEvent)
 	}
 
 	return finalResponse, nil
-}
-
-func (m *Module) postPRComment(ctx context.Context, prNumber int, body, owner, repo string) error {
-	comment := &github.IssueComment{Body: &body}
-	_, _, err := m.githubClient.Issues.CreateComment(ctx, owner, repo, prNumber, comment)
-	if err != nil {
-		return err
-	}
-	return nil
 }

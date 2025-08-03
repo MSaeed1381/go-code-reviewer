@@ -4,16 +4,19 @@ import (
 	"context"
 	"errors"
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
-	openaiembedder "github.com/amikos-tech/chroma-go/pkg/embeddings/openai"
+	chromaembedding "github.com/amikos-tech/chroma-go/pkg/embeddings/openai"
 	"github.com/google/go-github/v58/github"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sirupsen/logrus"
+	langchainopenai "github.com/tmc/langchaingo/llms/openai"
 	"go_code_reviewer/api"
 	"go_code_reviewer/internal/assistant"
 	"go_code_reviewer/internal/code_reviewer"
 	"go_code_reviewer/internal/config"
 	"go_code_reviewer/internal/embedder"
 	"go_code_reviewer/internal/parser"
+	"go_code_reviewer/internal/repositories"
+	"go_code_reviewer/internal/vsc"
 	"go_code_reviewer/pkg/log"
 	"golang.org/x/oauth2"
 	"net/http"
@@ -21,11 +24,11 @@ import (
 )
 
 type Service struct {
-	httpServer       *http.Server
-	embeddingClient  *openai.Client
-	llmClient        *openai.Client
-	chromaCollection chroma.Collection
-	githubClient     *github.Client
+	httpServer      *http.Server
+	embeddingClient *openai.Client
+	llm             *langchainopenai.LLM
+	chromaClient    chroma.Client
+	githubClient    *github.Client
 }
 
 func (s *Service) Start() {
@@ -41,21 +44,31 @@ func (s *Service) Start() {
 		"llm_max_tokens":  serviceConfig.LLM.MaxTokens,
 		"llm_base_url":    serviceConfig.LLM.APIBaseURL,
 		"embedding_model": serviceConfig.Embedding.Model,
-	}).Info("Config loaded for code reviewer s")
+	}).Info("Config loaded for code reviewer")
 
 	if err := s.ConnectToServices(serviceConfig); err != nil {
 		logger.WithError(err).Fatal("failed to connect to services")
 	}
 
+	openaiEmbeddingFunc, err := chromaembedding.NewOpenAIEmbeddingFunction(
+		serviceConfig.LLM.OpenApiKey,
+		chromaembedding.WithBaseURL(serviceConfig.Embedding.APIBaseURL),
+		chromaembedding.WithModel(chromaembedding.EmbeddingModel(serviceConfig.Embedding.Model)),
+	)
+	if err != nil {
+		logger.WithError(err).Fatal("failed to create openai embedding function")
+	}
+
+	embeddingsRepo := repositories.NewEmbeddingRepository(s.chromaClient, openaiEmbeddingFunc, serviceConfig.ChromaDB.CollectionName)
 	projectParser := parser.NewProjectParser(map[string]*parser.CodeParser{
 		".py": parser.NewCodeParser(parser.LanguagePython),
 		".go": parser.NewCodeParser(parser.LanguageGo),
 	})
 
-	pullRequestEventChannel := make(chan *github.PullRequestEvent)
-	projectEmbedder := embedder.NewProjectEmbedder(s.embeddingClient, s.chromaCollection, openai.EmbeddingModel(serviceConfig.Embedding.Model))
-	codeAssistant := assistant.NewAssistant(serviceConfig, s.chromaCollection, s.llmClient)
-	codeReviewerModule := code_reviewer.NewModule(projectParser, projectEmbedder, codeAssistant, pullRequestEventChannel, s.githubClient)
+	pullRequestEventChannel := make(chan *vsc.PullRequestEvent)
+	projectEmbedder := embedder.NewProjectEmbedder(embedder.NewOpenAiEmbeddingClient(s.embeddingClient), embeddingsRepo, serviceConfig.Embedding.Model)
+	codeAssistant := assistant.NewAssistant(serviceConfig, embeddingsRepo, s.llm, embedder.NewOpenAiEmbeddingClient(s.embeddingClient))
+	codeReviewerModule := code_reviewer.NewModule(projectParser, projectEmbedder, codeAssistant, pullRequestEventChannel, vsc.NewGithub(s.githubClient))
 	go codeReviewerModule.Start()
 
 	handler := api.NewHandler(serviceConfig, codeReviewerModule, pullRequestEventChannel)
@@ -75,7 +88,7 @@ func (s *Service) Close() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	s.httpServer.Shutdown(ctx)
-	s.chromaCollection.Close()
+	s.chromaClient.Close()
 }
 
 func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
@@ -88,35 +101,18 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 	s.embeddingClient = openai.NewClientWithConfig(embeddingClientConfig)
 
 	// connect to llm client
-	llmClientConfig := openai.DefaultConfig(serviceConfig.LLM.OpenApiKey)
-	if serviceConfig.LLM.APIBaseURL == "" {
-		return errors.New("empty llm api base url")
+	llm, err := langchainopenai.New(langchainopenai.WithBaseURL(serviceConfig.LLM.APIBaseURL), langchainopenai.WithModel(serviceConfig.LLM.Model), langchainopenai.WithToken(serviceConfig.LLM.OpenApiKey))
+	if err != nil {
+		return err
 	}
-	llmClientConfig.BaseURL = serviceConfig.LLM.APIBaseURL
-	s.llmClient = openai.NewClientWithConfig(llmClientConfig)
+	s.llm = llm
 
 	// connect to chroma db client
 	chromaClient, err := chroma.NewHTTPClient(chroma.WithBaseURL(serviceConfig.ChromaDB.Address))
 	if err != nil {
 		return err
 	}
-	defer chromaClient.Close()
-
-	openaiEmbeddingFunc, err := openaiembedder.NewOpenAIEmbeddingFunction(
-		serviceConfig.LLM.OpenApiKey,
-		openaiembedder.WithBaseURL(serviceConfig.Embedding.APIBaseURL),
-		openaiembedder.WithModel(openaiembedder.EmbeddingModel(serviceConfig.Embedding.Model)),
-	)
-	if err != nil {
-		return err
-	}
-
-	// connect to chroma db collection
-	chromaCollection, err := chromaClient.GetCollection(context.Background(), serviceConfig.ChromaDB.CollectionName, chroma.WithEmbeddingFunctionGet(openaiEmbeddingFunc))
-	if err != nil {
-		return err
-	}
-	s.chromaCollection = chromaCollection
+	s.chromaClient = chromaClient
 
 	// connect to github
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: serviceConfig.Github.AccessToken})

@@ -2,6 +2,7 @@ package parser
 
 import (
 	"context"
+	"go_code_reviewer/internal/models"
 	"go_code_reviewer/pkg/log"
 	"os"
 	"path/filepath"
@@ -18,9 +19,9 @@ func NewProjectParser(parsers map[string]*CodeParser) *ProjectParser {
 	}
 }
 
-func (pp *ProjectParser) ParseProject(ctx context.Context, rootPath string) ([]*Snippet, error) {
+func (pp *ProjectParser) ParseProject(ctx context.Context, rootPath string) ([]*models.Snippet, error) {
 	logger := log.GetLogger()
-	var allSnippets []*Snippet
+	var allSnippets []*models.Snippet
 	err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err

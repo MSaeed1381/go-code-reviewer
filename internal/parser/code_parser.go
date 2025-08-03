@@ -2,6 +2,7 @@ package parser
 
 import (
 	"context"
+	"go_code_reviewer/internal/models"
 	"go_code_reviewer/pkg/log"
 
 	"github.com/google/uuid"
@@ -43,7 +44,7 @@ func (p *CodeParser) isTargetType(nodeType string) bool {
 	return false
 }
 
-func (p *CodeParser) ParseFile(ctx context.Context, content []byte, filename string) []*Snippet {
+func (p *CodeParser) ParseFile(ctx context.Context, content []byte, filename string) []*models.Snippet {
 	logger := log.GetLogger()
 	parser := sitter.NewParser()
 	parser.SetLanguage(p.language)
@@ -55,16 +56,16 @@ func (p *CodeParser) ParseFile(ctx context.Context, content []byte, filename str
 	}
 
 	cursor := sitter.NewTreeCursor(tree.RootNode())
-	var snippets []*Snippet
+	var snippets []*models.Snippet
 	if p.isTargetType(cursor.CurrentNode().Type()) {
-		snippets = append(snippets, NewSnippet(uuid.New().String(), cursor.CurrentNode().Content(content), filename, p.langString))
+		snippets = append(snippets, models.NewSnippet(uuid.New().String(), cursor.CurrentNode().Content(content), filename, string(p.langString)))
 	}
 
 	if cursor.GoToFirstChild() {
 		for {
 			node := cursor.CurrentNode()
 			if p.isTargetType(node.Type()) {
-				snippets = append(snippets, NewSnippet(uuid.New().String(), node.Content(content), filename, p.langString))
+				snippets = append(snippets, models.NewSnippet(uuid.New().String(), node.Content(content), filename, string(p.langString)))
 			}
 			if !cursor.GoToNextSibling() {
 				break
