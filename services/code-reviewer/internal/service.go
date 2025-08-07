@@ -9,15 +9,15 @@ import (
 	"github.com/sashabaranov/go-openai"
 	"github.com/sirupsen/logrus"
 	langchainopenai "github.com/tmc/langchaingo/llms/openai"
-	"go_code_reviewer/api"
-	"go_code_reviewer/internal/assistant"
-	"go_code_reviewer/internal/code_reviewer"
-	"go_code_reviewer/internal/config"
-	"go_code_reviewer/internal/embedder"
-	"go_code_reviewer/internal/parser"
-	"go_code_reviewer/internal/repositories"
-	"go_code_reviewer/internal/vsc"
+	"go_code_reviewer/pkg/kafka"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/services/code-reviewer/internal/assistant"
+	"go_code_reviewer/services/code-reviewer/internal/config"
+	"go_code_reviewer/services/code-reviewer/internal/embedder"
+	eventprocessor "go_code_reviewer/services/code-reviewer/internal/event-processor"
+	"go_code_reviewer/services/code-reviewer/internal/parser"
+	"go_code_reviewer/services/code-reviewer/internal/repositories"
+	"go_code_reviewer/services/code-reviewer/internal/vsc"
 	"golang.org/x/oauth2"
 	"net/http"
 	"time"
@@ -29,6 +29,7 @@ type Service struct {
 	llm             *langchainopenai.LLM
 	chromaClient    chroma.Client
 	githubClient    *github.Client
+	kafkaConsumer   kafka.Consumer
 }
 
 func (s *Service) Start() {
@@ -65,22 +66,14 @@ func (s *Service) Start() {
 		".go": parser.NewCodeParser(parser.LanguageGo),
 	})
 
-	pullRequestEventChannel := make(chan *vsc.PullRequestEvent)
 	projectEmbedder := embedder.NewProjectEmbedder(embedder.NewOpenAiEmbeddingClient(s.embeddingClient), embeddingsRepo, serviceConfig.Embedding.Model)
 	codeAssistant := assistant.NewAssistant(serviceConfig, embeddingsRepo, s.llm, embedder.NewOpenAiEmbeddingClient(s.embeddingClient))
-	codeReviewerModule := code_reviewer.NewModule(projectParser, projectEmbedder, codeAssistant, pullRequestEventChannel, vsc.NewGithub(s.githubClient))
-	go codeReviewerModule.Start()
+	eventProcessor := eventprocessor.NewModule(projectParser, projectEmbedder, codeAssistant, vsc.NewGithub(s.githubClient), s.kafkaConsumer, serviceConfig.WorkerCount)
 
-	handler := api.NewHandler(serviceConfig, codeReviewerModule, pullRequestEventChannel)
-	r := handler.RegisterRoutes()
-	s.httpServer = &http.Server{
-		Addr:    serviceConfig.HttpServer.Address,
-		Handler: r,
-	}
-
-	logger.Info("server running on " + serviceConfig.HttpServer.Address)
-	if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.WithError(err).Fatal("failed to start http server")
+	eventProcessor.Start()
+	err = s.kafkaConsumer.Start()
+	if err != nil {
+		logger.WithError(err).Fatal("failed to start kafka consumer")
 	}
 }
 
@@ -89,6 +82,7 @@ func (s *Service) Close() {
 	defer cancel()
 	s.httpServer.Shutdown(ctx)
 	s.chromaClient.Close()
+	s.kafkaConsumer.Close()
 }
 
 func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
@@ -118,6 +112,17 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: serviceConfig.Github.AccessToken})
 	tc := oauth2.NewClient(context.Background(), ts)
 	s.githubClient = github.NewClient(tc)
+
+	// connect to kafka
+	s.kafkaConsumer, err = kafka.NewConsumer(kafka.ConsumerConfig{
+		Brokers:    serviceConfig.Kafka.Brokers,
+		GroupID:    serviceConfig.Kafka.GroupID,
+		Topics:     []string{serviceConfig.Kafka.Topics},
+		AutoOffset: serviceConfig.Kafka.AutoOffset,
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
