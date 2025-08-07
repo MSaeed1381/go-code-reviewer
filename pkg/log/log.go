@@ -3,21 +3,22 @@ package log
 import (
 	"github.com/sirupsen/logrus"
 	"io"
+	"log"
 	"os"
 )
 
-var log *logrus.Logger
+type Field string
+
+const (
+	ServiceName Field = "service_name"
+)
+
+var logEntry *logrus.Entry
 
 func Init(cfg Config) {
-	log = logrus.New()
-	log.SetLevel(cfg.Level)
-	log.SetFormatter(&logrus.TextFormatter{ // development formatter
-		FullTimestamp: true,
-		ForceColors:   true,
-	})
-	if cfg.Env == "production" {
-		log.SetFormatter(newJSONFormatter())
-	}
+	logger := logrus.New()
+	logger.SetLevel(cfg.Level)
+	logger.SetFormatter(newJSONFormatter())
 
 	var writers []io.Writer
 	writers = append(writers, os.Stdout)
@@ -29,15 +30,16 @@ func Init(cfg Config) {
 		writers = append(writers, file)
 	}
 
+	logEntry = logger.WithFields(logrus.Fields{string(ServiceName): cfg.Service})
 	log.SetOutput(io.MultiWriter(writers...))
 }
 
-func GetLogger() *logrus.Logger {
-	if log == nil {
+func GetLogger() *logrus.Entry {
+	if logEntry == nil {
 		Init(Config{
 			Level: logrus.InfoLevel,
 			Env:   "development",
 		})
 	}
-	return log
+	return logEntry
 }
