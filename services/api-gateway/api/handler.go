@@ -4,25 +4,22 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
-	"go_code_reviewer/internal/code_reviewer"
-	"go_code_reviewer/internal/config"
-	serviceError "go_code_reviewer/internal/errors"
-	"go_code_reviewer/internal/vsc"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/services/api-gateway/internal/config"
+	serviceErrors "go_code_reviewer/services/api-gateway/internal/errors"
+	eventprocessor "go_code_reviewer/services/api-gateway/internal/event-processor"
 	"net/http"
 )
 
 type Handler struct {
-	config                *config.Config
-	module                *code_reviewer.Module
-	pullRequestEventQueue chan *vsc.PullRequestEvent
+	config *config.Config
+	module *eventprocessor.Module
 }
 
-func NewHandler(config *config.Config, module *code_reviewer.Module, pullRequestEventQueue chan *vsc.PullRequestEvent) *Handler {
+func NewHandler(config *config.Config, module *eventprocessor.Module) *Handler {
 	return &Handler{
-		config:                config,
-		module:                module,
-		pullRequestEventQueue: pullRequestEventQueue,
+		config: config,
+		module: module,
 	}
 }
 
@@ -40,7 +37,7 @@ func (h *Handler) RegisterRoutes() *gin.Engine {
 
 	r.GET("/readiness", h.readiness)
 	r.POST("/liveness", h.liveness)
-	r.POST("/webhook", h.webhook)
+	r.POST("/github-webhook", h.githubWebhook)
 
 	return r
 }
@@ -73,7 +70,7 @@ type ErrorResponse struct {
 func (h *Handler) handleErrorApiResponse(c *gin.Context, err error, prompt string) {
 	logger := log.GetLogger()
 
-	var httpErr *serviceError.HttpError
+	var httpErr *serviceErrors.HttpError
 	if errors.As(err, &httpErr) {
 		if !httpErr.IsUserError {
 			logger.WithError(err).Error(prompt)

@@ -7,10 +7,10 @@ import (
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/prompts"
-	"go_code_reviewer/internal/config"
-	"go_code_reviewer/internal/embedder"
-	"go_code_reviewer/internal/repositories"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/services/code-reviewer/internal/config"
+	"go_code_reviewer/services/code-reviewer/internal/embedder"
+	"go_code_reviewer/services/code-reviewer/internal/repositories"
 	"strings"
 
 	"github.com/sashabaranov/go-openai"

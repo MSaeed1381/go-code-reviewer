@@ -2,8 +2,8 @@ package parser
 
 import (
 	"context"
-	"go_code_reviewer/internal/models"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/services/code-reviewer/internal/models"
 	"os"
 	"path/filepath"
 	"strings"

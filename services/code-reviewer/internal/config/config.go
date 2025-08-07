@@ -6,22 +6,25 @@ import (
 )
 
 type Config struct {
-	Env        string           `yaml:"env" json:"env"`
-	HttpServer HttpServer       `yaml:"http_server" json:"http_server"`
-	LLM        LLMSection       `yaml:"llm" json:"llm"`
-	Embedding  EmbeddingSection `yaml:"embedding" json:"embedding"`
-	Tasks      TasksSection     `yaml:"tasks" json:"tasks"`
-	ChromaDB   ChromaDBSection  `yaml:"chroma_db" json:"chroma_db"`
-	Github     GithubSection    `yaml:"github" json:"github"`
+	Env         string           `yaml:"env" json:"env"`
+	WorkerCount int32            `yaml:"worker_count" json:"worker_count"`
+	LLM         LLMSection       `yaml:"llm" json:"llm"`
+	Embedding   EmbeddingSection `yaml:"embedding" json:"embedding"`
+	Tasks       TasksSection     `yaml:"tasks" json:"tasks"`
+	ChromaDB    ChromaDBSection  `yaml:"chroma_db" json:"chroma_db"`
+	Github      GithubSection    `yaml:"github" json:"github"`
+	Kafka       KafkaSection     `yaml:"kafka" json:"kafka"`
+}
+
+type KafkaSection struct {
+	Brokers    string `yaml:"brokers" json:"brokers"`
+	GroupID    string `yaml:"group_id" json:"group_id"`
+	Topics     string `yaml:"topics" json:"topics"`
+	AutoOffset string `yaml:"auto_offset" json:"auto_offset"`
 }
 
 type GithubSection struct {
-	WebhookSecret string `yaml:"webhook_secret" json:"webhook_secret"`
-	AccessToken   string `yaml:"access_token" json:"access_token"`
-}
-
-type HttpServer struct {
-	Address string `yaml:"address" json:"address"`
+	AccessToken string `yaml:"access_token" json:"access_token"`
 }
 
 type ChromaDBSection struct {
@@ -73,11 +76,10 @@ type DetectLanguage struct {
 func LoadConfig(path string) (*Config, error) {
 	config := &Config{
 		LLM: LLMSection{
-			OpenApiKey: os.Getenv("LLM_OPEN_API_KEY"),
+			OpenApiKey: os.Getenv("LLM_OPEN_AI_API_KEY"),
 		},
 		Github: GithubSection{
-			WebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
-			AccessToken:   os.Getenv("GITHUB_ACCESS_TOKEN"),
+			AccessToken: os.Getenv("GITHUB_ACCESS_TOKEN"),
 		},
 	}
 

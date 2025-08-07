@@ -4,7 +4,7 @@ import (
 	"context"
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/amikos-tech/chroma-go/pkg/embeddings"
-	"go_code_reviewer/internal/models"
+	"go_code_reviewer/services/code-reviewer/internal/models"
 )
 
 type EmbeddingsRepository interface {

@@ -1,6 +1,10 @@
 evn: "development"
-http_server:
-  address: ":8080"
+worker_count: 10
+kafka:
+  brokers: "localhost:9092"
+  topics: "pr-events"
+  group_id: "code-reviewer-testttt"
+  auto_offset: "earliest"
 llm:
   api_base_url: "https://api.metisai.ir/openai/v1"
   model: "gpt-4.1-mini"
