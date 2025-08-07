@@ -10,12 +10,13 @@ type ServiceInterface interface {
 	Close()
 }
 
-func RunService(service ServiceInterface) {
+func RunService(serviceName string, service ServiceInterface) {
 	log.Init(log.Config{
 		Level:     logrus.InfoLevel,
 		Env:       "development",
 		LogToFile: true,
-		FilePath:  "./service.log",
+		FilePath:  "../../service.log",
+		Service:   serviceName,
 	})
 
 	service.Start()

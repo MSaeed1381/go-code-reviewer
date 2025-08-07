@@ -7,4 +7,5 @@ type Config struct {
 	Env       string // "production" or "development"
 	LogToFile bool
 	FilePath  string
+	Service   string
 }

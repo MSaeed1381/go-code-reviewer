@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	app.RunService(&internal.Service{})
+	app.RunService("code-reviewer", &internal.Service{})
 }
