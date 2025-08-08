@@ -11,7 +11,7 @@ type kafkaProducer struct {
 
 func NewProducer(conf ProducerConfig) (Producer, error) {
 	client, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": conf.Brokers,
+		bootstrapServersKey: conf.Brokers,
 	})
 	if err != nil {
 		return nil, err
