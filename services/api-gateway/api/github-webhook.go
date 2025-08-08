@@ -31,6 +31,7 @@ func (h *Handler) githubWebhook(c *gin.Context) {
 			h.handleErrorApiResponse(c, err, "failed to convert github event")
 			return
 		}
+		logger.Infof("Received pull request event %v", event)
 		err = h.module.ProcessEvent(event)
 		if err != nil {
 			h.handleErrorApiResponse(c, err, "failed to send event to kafka")

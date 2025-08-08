@@ -8,12 +8,17 @@ import (
 type Config struct {
 	Env         string           `yaml:"env" json:"env"`
 	WorkerCount int32            `yaml:"worker_count" json:"worker_count"`
+	Prometheus  PrometheusConfig `yaml:"prometheus" json:"prometheus"`
 	LLM         LLMSection       `yaml:"llm" json:"llm"`
 	Embedding   EmbeddingSection `yaml:"embedding" json:"embedding"`
 	Tasks       TasksSection     `yaml:"tasks" json:"tasks"`
 	ChromaDB    ChromaDBSection  `yaml:"chroma_db" json:"chroma_db"`
 	Github      GithubSection    `yaml:"github" json:"github"`
 	Kafka       KafkaSection     `yaml:"kafka" json:"kafka"`
+}
+
+type PrometheusConfig struct {
+	Address string `yaml:"address" json:"address"`
 }
 
 type KafkaSection struct {

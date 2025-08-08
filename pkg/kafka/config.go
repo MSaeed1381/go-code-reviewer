@@ -15,5 +15,6 @@ type ConsumerConfig struct {
 }
 
 type ProducerConfig struct {
-	Brokers string
+	Brokers        string
+	metricsHandler func(status string)
 }
