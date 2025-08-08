@@ -62,3 +62,8 @@ staticcheck.conf
 *.iml
 
 Code-Review-Demo
+
+# prometheus and grafana data
+grafana-data
+prometheus-data
+data

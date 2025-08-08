@@ -15,6 +15,7 @@ import (
 	"go_code_reviewer/services/code-reviewer/internal/config"
 	"go_code_reviewer/services/code-reviewer/internal/embedder"
 	eventprocessor "go_code_reviewer/services/code-reviewer/internal/event-processor"
+	"go_code_reviewer/services/code-reviewer/internal/metrics"
 	"go_code_reviewer/services/code-reviewer/internal/parser"
 	"go_code_reviewer/services/code-reviewer/internal/repositories"
 	"go_code_reviewer/services/code-reviewer/internal/vsc"
@@ -113,13 +114,16 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 	tc := oauth2.NewClient(context.Background(), ts)
 	s.githubClient = github.NewClient(tc)
 
+	// connect to prometheus
+	metrics.Init(serviceConfig.Prometheus.Address)
+
 	// connect to kafka
 	s.kafkaConsumer, err = kafka.NewConsumer(kafka.ConsumerConfig{
 		Brokers:    serviceConfig.Kafka.Brokers,
 		GroupID:    serviceConfig.Kafka.GroupID,
 		Topics:     []string{serviceConfig.Kafka.Topics},
 		AutoOffset: serviceConfig.Kafka.AutoOffset,
-	})
+	}, kafka.WithMetricsHandler(metrics.Get().ObserveKafkaPublish))
 	if err != nil {
 		return err
 	}

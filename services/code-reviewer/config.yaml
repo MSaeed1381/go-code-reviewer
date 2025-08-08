@@ -1,15 +1,17 @@
 evn: "development"
 worker_count: 10
+prometheus:
+  address: ":5555"
 kafka:
   brokers: "localhost:9092"
   topics: "pr-events"
-  group_id: "code-reviewer-testttt"
-  auto_offset: "earliest"
+  group_id: "code-reviewer-group"
+  auto_offset: "latest"
 llm:
   api_base_url: "https://api.metisai.ir/openai/v1"
   model: "gpt-4.1-mini"
   temperature: 0.2
-  max_tokens: 1024
+  max_tokens: 256
 
 embedding:
   api_base_url: "https://api.metisai.ir/openai/v1"

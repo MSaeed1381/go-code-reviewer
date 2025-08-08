@@ -9,6 +9,7 @@ import (
 	"go_code_reviewer/services/code-reviewer/internal/assistant"
 	"go_code_reviewer/services/code-reviewer/internal/embedder"
 	"go_code_reviewer/services/code-reviewer/internal/errors"
+	"go_code_reviewer/services/code-reviewer/internal/metrics"
 	"go_code_reviewer/services/code-reviewer/internal/parser"
 	"go_code_reviewer/services/code-reviewer/internal/vsc"
 	"time"
@@ -39,20 +40,32 @@ func (m *Module) Start() {
 	for i := 0; i < int(m.workerCount); i++ {
 		go func() {
 			for kafkaMessage := range m.consumerClint.Channel() {
+				start := time.Now()
+				var err error
 				var event models.PullRequestEvent
-				err := json.Unmarshal(kafkaMessage.Value, &event)
+				err = json.Unmarshal(kafkaMessage.Value, &event)
 				if err != nil {
 					logger.WithError(err).Error("failed to unmarshal event")
 					continue
 				}
 
-				if err := m.process(&event); err == nil {
+				if err = m.process(&event); err == nil {
 					if err := m.consumerClint.CommitMessage(kafkaMessage); err != nil {
 						logger.WithError(err).Error("failed to commit message")
 					}
 				} else {
 					logger.WithError(err).Warn("failed to process message")
 				}
+
+				// observe metrics
+				go func() {
+					status := metrics.Success
+					if err != nil {
+						status = metrics.Failure
+					}
+					metrics.Get().ObserveEventProcessing(status)
+					metrics.Get().ObserveEventProcessingLatency(status, start)
+				}()
 			}
 		}()
 	}

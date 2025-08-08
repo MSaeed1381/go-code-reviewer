@@ -6,16 +6,30 @@ import (
 )
 
 const (
-	defaultTimeoutMeiliSeconds = 2000
+	defaultTimeoutMeiliSeconds = 1000
+	defaultChannelSize         = 2000
 )
 
 type kafkaConsumer struct {
-	conf         ConsumerConfig
-	client       *kafka.Consumer
-	messagesChan chan *kafka.Message
+	conf                  ConsumerConfig
+	client                *kafka.Consumer
+	messagesChan          chan *kafka.Message
+	observeConsumeCounter func(status string)
 }
 
-func NewConsumer(conf ConsumerConfig) (Consumer, error) {
+type Option func(consumer *kafkaConsumer)
+
+func WithMetricsHandler(handler func(status string)) Option {
+	return func(consumer *kafkaConsumer) {
+		consumer.observeConsumeCounter = handler
+	}
+}
+
+func NewConsumer(conf ConsumerConfig, opts ...Option) (Consumer, error) {
+	consumer := kafkaConsumer{}
+	for _, opt := range opts {
+		opt(&consumer)
+	}
 	client, err := kafka.NewConsumer(&kafka.ConfigMap{
 		bootstrapServersKey: conf.Brokers,
 		groupIdKey:          conf.GroupID,
@@ -30,11 +44,10 @@ func NewConsumer(conf ConsumerConfig) (Consumer, error) {
 		log.GetLogger().WithError(err).Fatal("failed to subscribe to topics")
 	}
 
-	return &kafkaConsumer{
-		conf:         conf,
-		client:       client,
-		messagesChan: make(chan *kafka.Message),
-	}, nil
+	consumer.conf = conf
+	consumer.client = client
+	consumer.messagesChan = make(chan *kafka.Message, defaultChannelSize)
+	return &consumer, nil
 }
 
 func (c *kafkaConsumer) Start() error {
@@ -45,6 +58,7 @@ func (c *kafkaConsumer) Start() error {
 			if e.TopicPartition.Error != nil {
 				return e.TopicPartition.Error
 			}
+			go c.observeConsumeCounter("success")
 			c.messagesChan <- e
 		case kafka.Error:
 			return e
