@@ -5,7 +5,9 @@ import (
 	"go_code_reviewer/pkg/log"
 )
 
-const defaultTimeoutMeiliSeconds = 2000
+const (
+	defaultTimeoutMeiliSeconds = 2000
+)
 
 type kafkaConsumer struct {
 	conf         ConsumerConfig
@@ -15,10 +17,10 @@ type kafkaConsumer struct {
 
 func NewConsumer(conf ConsumerConfig) (Consumer, error) {
 	client, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":  conf.Brokers,
-		"group.id":           conf.GroupID,
-		"auto.offset.reset":  conf.AutoOffset,
-		"enable.auto.commit": false,
+		bootstrapServersKey: conf.Brokers,
+		groupIdKey:          conf.GroupID,
+		autoOffsetResetKey:  conf.AutoOffset,
+		enableAutoCommitKey: false,
 	})
 	if err != nil {
 		log.GetLogger().WithError(err).Fatal("failed to connect to kafka")

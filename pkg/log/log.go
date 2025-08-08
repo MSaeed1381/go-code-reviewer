@@ -38,7 +38,6 @@ func GetLogger() *logrus.Entry {
 	if logEntry == nil {
 		Init(Config{
 			Level: logrus.InfoLevel,
-			Env:   "development",
 		})
 	}
 	return logEntry

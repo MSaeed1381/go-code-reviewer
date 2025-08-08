@@ -13,16 +13,6 @@ func (e *HttpError) Error() string {
 }
 
 var (
-	ErrNoResponseChoice = &HttpError{
-		IsUserError: false,
-		Description: "no response choices from LLM",
-		StatusCode:  http.StatusInternalServerError,
-	}
-	ErrUnknownIntent = &HttpError{
-		IsUserError: false,
-		Description: "unknown intent",
-		StatusCode:  http.StatusInternalServerError,
-	}
 	ErrNoSnippetFound = &HttpError{
 		IsUserError: true,
 		Description: "no snippet found",

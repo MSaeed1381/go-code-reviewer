@@ -5,6 +5,10 @@ import (
 	"go_code_reviewer/pkg/log"
 )
 
+const (
+	defaultLogFilePath = "../../service.log"
+)
+
 type ServiceInterface interface {
 	Start()
 	Close()
@@ -13,9 +17,8 @@ type ServiceInterface interface {
 func RunService(serviceName string, service ServiceInterface) {
 	log.Init(log.Config{
 		Level:     logrus.InfoLevel,
-		Env:       "development",
 		LogToFile: true,
-		FilePath:  "../../service.log",
+		FilePath:  defaultLogFilePath,
 		Service:   serviceName,
 	})
 
