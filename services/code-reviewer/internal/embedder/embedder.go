@@ -21,7 +21,7 @@ func NewProjectEmbedder(embeddingClient EmbeddingClient, embeddingsRepo reposito
 	}
 }
 
-func (p *ProjectEmbedder) EmbedProject(ctx context.Context, snippets []*models.Snippet) error {
+func (p *ProjectEmbedder) EmbedProject(ctx context.Context, projectId string, snippets []*models.Snippet) error {
 	logger := log.GetLogger()
 	var texts []string
 	for _, snippet := range snippets {
@@ -38,7 +38,7 @@ func (p *ProjectEmbedder) EmbedProject(ctx context.Context, snippets []*models.S
 		snippets[i].Embedding = embeddings[i].Embedding
 	}
 
-	err = p.embeddingsRepo.Add(ctx, snippets)
+	err = p.embeddingsRepo.Add(ctx, snippets, projectId)
 	if err != nil {
 		logger.WithError(err).Error("failed to persist embeddings")
 		return err

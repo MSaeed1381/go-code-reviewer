@@ -32,9 +32,9 @@ func NewAssistant(config *config.Config, embeddingRepo repositories.EmbeddingsRe
 	}
 }
 
-func (a *Assistant) PerformTask(ctx context.Context, task Task, queryText string) (string, error) {
+func (a *Assistant) PerformTask(ctx context.Context, task Task, queryText, projectId string) (string, error) {
 	logger := log.GetLogger()
-	contextString, err := a.getContextFromChroma(ctx, queryText)
+	contextString, err := a.getContextFromChroma(ctx, projectId, queryText)
 	if err != nil {
 		logger.WithError(err).Error("failed to get context from chroma")
 		return "", err
@@ -49,7 +49,7 @@ func (a *Assistant) PerformTask(ctx context.Context, task Task, queryText string
 	return response, nil
 }
 
-func (a *Assistant) getContextFromChroma(ctx context.Context, queryText string) (string, error) {
+func (a *Assistant) getContextFromChroma(ctx context.Context, projectId, queryText string) (string, error) {
 	logger := log.GetLogger()
 
 	resp, err := a.embeddingClient.CreateEmbeddings(ctx, string(openai.SmallEmbedding3), []string{queryText})
@@ -58,7 +58,7 @@ func (a *Assistant) getContextFromChroma(ctx context.Context, queryText string) 
 		return "", err
 	}
 
-	records, err := a.embeddingRepo.GetNearestRecord(ctx, resp[0].Embedding, 5)
+	records, err := a.embeddingRepo.GetNearestRecord(ctx, resp[0].Embedding, 5, projectId)
 	if err != nil {
 		logger.WithError(err).Error("failed to get nearest records")
 		return "", err

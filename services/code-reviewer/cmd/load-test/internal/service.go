@@ -2,7 +2,6 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
 	"go_code_reviewer/pkg/kafka"
 	"go_code_reviewer/pkg/log"
 	"go_code_reviewer/services/api-gateway/pkg/models"
@@ -48,7 +47,6 @@ func (m *LoadTestModule) Start() {
 		case <-ticker.C:
 			go func() {
 				m.producer.Send(m.config.KafkaTopic, marshal)
-				fmt.Println(i)
 				i = i + 1
 			}()
 		}

@@ -5,10 +5,11 @@ type Snippet struct {
 	Content   string    `json:"content"`
 	Filename  string    `json:"filename"`
 	Language  string    `json:"language"`
+	ProjectId string    `json:"project_id"`
 	Embedding []float32 `json:"embedding,omitempty"`
 }
 
-func NewSnippet(id, content, filename string, language string) *Snippet {
+func NewSnippet(id, content, filename, language string) *Snippet {
 	return &Snippet{
 		ID:       id,
 		Content:  content,

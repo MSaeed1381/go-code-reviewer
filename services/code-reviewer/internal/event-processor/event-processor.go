@@ -46,6 +46,7 @@ func (m *Module) Start() {
 				err = json.Unmarshal(kafkaMessage.Value, &event)
 				if err != nil {
 					logger.WithError(err).Error("failed to unmarshal event")
+					go observeMetrics(start, err)
 					continue
 				}
 
@@ -56,16 +57,7 @@ func (m *Module) Start() {
 				} else {
 					logger.WithError(err).Warn("failed to process message")
 				}
-
-				// observe metrics
-				go func() {
-					status := metrics.Success
-					if err != nil {
-						status = metrics.Failure
-					}
-					metrics.Get().ObserveEventProcessing(status)
-					metrics.Get().ObserveEventProcessingLatency(status, start)
-				}()
+				go observeMetrics(start, err)
 			}
 		}()
 	}
@@ -96,7 +88,7 @@ func (m *Module) process(event *models.PullRequestEvent) error {
 		return errors.ErrNoSnippetFound
 	}
 
-	err = m.projectEmbedder.EmbedProject(ctx, snippets)
+	err = m.projectEmbedder.EmbedProject(ctx, models.GetProjectIdentifier(event), snippets)
 	if err != nil {
 		logger.WithError(err).Error("Failed to embed project")
 		return err
@@ -108,7 +100,7 @@ func (m *Module) process(event *models.PullRequestEvent) error {
 		return err
 	}
 
-	review, err := m.codeAssistant.PerformTask(ctx, assistant.TaskCodeReview, diff)
+	review, err := m.codeAssistant.PerformTask(ctx, assistant.TaskCodeReview, diff, models.GetProjectIdentifier(event))
 	if err != nil {
 		logger.WithError(err).Error("failed to perform coding task")
 		return err
@@ -121,4 +113,13 @@ func (m *Module) process(event *models.PullRequestEvent) error {
 	}
 
 	return nil
+}
+
+func observeMetrics(start time.Time, err error) {
+	status := metrics.Success
+	if err != nil {
+		status = metrics.Failure
+	}
+	metrics.Get().ObserveEventProcessing(status)
+	metrics.Get().ObserveEventProcessingLatency(status, start)
 }

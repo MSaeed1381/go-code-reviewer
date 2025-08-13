@@ -2,15 +2,18 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/amikos-tech/chroma-go/pkg/embeddings"
 	"go_code_reviewer/services/code-reviewer/internal/models"
 )
 
 type EmbeddingsRepository interface {
-	Add(ctx context.Context, snippets []*models.Snippet) error
-	GetNearestRecord(ctx context.Context, vectorEmbedding []float32, nResult int) ([]*models.Snippet, error)
+	Add(ctx context.Context, snippets []*models.Snippet, projectId string) error
+	GetNearestRecord(ctx context.Context, vectorEmbedding []float32, nResult int, projectId string) ([]*models.Snippet, error)
 }
+
+const projectIdKey = "project_id"
 
 type EmbeddingRepositoryImpl struct {
 	chromaCollection chroma.Collection
@@ -27,7 +30,7 @@ func NewEmbeddingRepository(chromaClient chroma.Client, embeddingFunction embedd
 	}
 }
 
-func (p *EmbeddingRepositoryImpl) Add(ctx context.Context, snippets []*models.Snippet) error {
+func (p *EmbeddingRepositoryImpl) Add(ctx context.Context, snippets []*models.Snippet, projectId string) error {
 	var ids []chroma.DocumentID
 	var documents []string
 	var embeddingsList embeddings.Embeddings
@@ -40,6 +43,7 @@ func (p *EmbeddingRepositoryImpl) Add(ctx context.Context, snippets []*models.Sn
 		metadataList = append(metadataList, chroma.NewMetadata(
 			chroma.NewStringAttribute("filename", snippet.Filename),
 			chroma.NewStringAttribute("language", snippet.Language),
+			chroma.NewStringAttribute(projectIdKey, projectId),
 		))
 	}
 
@@ -52,11 +56,12 @@ func (p *EmbeddingRepositoryImpl) Add(ctx context.Context, snippets []*models.Sn
 	)
 }
 
-func (p *EmbeddingRepositoryImpl) GetNearestRecord(ctx context.Context, vectorEmbedding []float32, nResult int) ([]*models.Snippet, error) {
-	results, err := p.chromaCollection.Query(
+func (p *EmbeddingRepositoryImpl) GetNearestRecord(ctx context.Context, vectorEmbedding []float32, nResult int, projectId string) ([]*models.Snippet, error) {
+	var results, err = p.chromaCollection.Query(
 		ctx,
 		chroma.WithQueryEmbeddings(embeddings.NewEmbeddingFromFloat32(vectorEmbedding)),
 		chroma.WithNResults(nResult),
+		chroma.WithWhereQuery(chroma.EqString(projectIdKey, projectId)),
 	)
 	if err != nil {
 		return nil, err
@@ -77,6 +82,9 @@ func (p *EmbeddingRepositoryImpl) GetNearestRecord(ctx context.Context, vectorEm
 			Filename: filename,
 			Language: language,
 		})
+
+		fmt.Println(doc.ContentString())
+		fmt.Println("-------")
 	}
 
 	return snippets, nil

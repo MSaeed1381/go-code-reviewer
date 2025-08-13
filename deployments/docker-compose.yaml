@@ -20,6 +20,16 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - ../data/kafka-data:/var/lib/kafka/data
+  chroma_db:
+    image: chromadb/chroma
+    container_name: chroma_db
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    volumes:
+      - ../data/chroma-data:/var/lib/chroma
   prometheus:
     image: docker.io/prom/prometheus
     container_name: prometheus
@@ -47,4 +57,8 @@ volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  chroma-data:
+    driver: local
+  kafka-data:
     driver: local
