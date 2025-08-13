@@ -58,7 +58,9 @@ func (c *kafkaConsumer) Start() error {
 			if e.TopicPartition.Error != nil {
 				return e.TopicPartition.Error
 			}
-			go c.observeConsumeCounter("success")
+			if c.observeConsumeCounter != nil {
+				go c.observeConsumeCounter("success") // observe consume rate
+			}
 			c.messagesChan <- e
 		case kafka.Error:
 			return e
