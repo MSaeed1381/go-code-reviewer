@@ -2,5 +2,5 @@ evn: "development"
 http_server:
   address: ":8080"
 kafka:
-  brokers: "localhost:9092"
+  brokers: "kafka:9092"
   topic: "pr-events"

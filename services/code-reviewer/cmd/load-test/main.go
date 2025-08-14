@@ -11,7 +11,7 @@ func main() {
 	messagesPerSecond := 30
 	logEntry := log.GetLogger()
 	producer, err := kafka.NewProducer(kafka.ProducerConfig{
-		Brokers: "localhost:9092",
+		Brokers: "kafka:9092",
 	})
 	if err != nil {
 		logEntry.WithError(err).Fatal("failed to create producer")
