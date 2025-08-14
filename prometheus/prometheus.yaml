@@ -4,4 +4,4 @@ scrape_configs:
   - job_name: 'code-reviewer'
     scrape_interval: 1s
     static_configs:
-      - targets: ['host.docker.internal:5555']
+      - targets: ['code-reviewer:5555']

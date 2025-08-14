@@ -3,9 +3,9 @@ worker_count: 10
 prometheus:
   address: ":5555"
 kafka:
-  brokers: "localhost:9092"
+  brokers: "kafka:9092"
   topics: "pr-events"
-  group_id: "code-reviewer-group"
+  group_id: "code-reviewer"
   auto_offset: "latest"
 llm:
   api_base_url: "https://api.metisai.ir/openai/v1"
@@ -18,7 +18,7 @@ embedding:
   model: "text-embedding-3-small"
 
 chroma_db:
-  address: "http://localhost:8000"
+  address: "http://chroma_db:8000"
   collection_name: "coderag"
 
 tasks:

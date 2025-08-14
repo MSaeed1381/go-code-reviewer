@@ -1,6 +1,24 @@
-version: '3.8'
-
 services:
+  code-reviewer:
+    image: code-reviewer:latest
+    platform: linux/amd64
+    env_file:
+      - ../services/code-reviewer/.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  api-gateway:
+    image: api-gateway:latest
+    platform: linux/amd64
+    env_file:
+      - ../services/api-gateway/.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
@@ -11,7 +29,7 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
@@ -22,6 +40,11 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     volumes:
       - ../data/kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "echo > /dev/tcp/localhost/9092" ]
+      interval: 5s
+      retries: 12
+
   chroma_db:
     image: chromadb/chroma
     container_name: chroma_db
