@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-github/v58/github"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sirupsen/logrus"
+	"github.com/tmc/langchaingo/llms"
 	langchainopenai "github.com/tmc/langchaingo/llms/openai"
 	"go_code_reviewer/pkg/kafka"
 	"go_code_reviewer/pkg/log"
@@ -20,16 +21,13 @@ import (
 	"go_code_reviewer/services/code-reviewer/internal/repositories"
 	"go_code_reviewer/services/code-reviewer/internal/vsc"
 	"golang.org/x/oauth2"
-	"net/http"
-	"time"
 )
 
 type Service struct {
-	httpServer      *http.Server
-	embeddingClient *openai.Client
-	llm             *langchainopenai.LLM
+	embeddingClient embedder.EmbeddingClient
+	llm             llms.Model
 	chromaClient    chroma.Client
-	githubClient    *github.Client
+	vscClient       vsc.VersionControlSystem
 	kafkaConsumer   kafka.Consumer
 }
 
@@ -67,9 +65,9 @@ func (s *Service) Start() {
 		".go": parser.NewCodeParser(parser.LanguageGo),
 	})
 
-	projectEmbedder := embedder.NewProjectEmbedder(embedder.NewOpenAiEmbeddingClient(s.embeddingClient), embeddingsRepo, serviceConfig.Embedding.Model)
-	codeAssistant := assistant.NewAssistant(serviceConfig, embeddingsRepo, s.llm, embedder.NewOpenAiEmbeddingClient(s.embeddingClient))
-	eventProcessor := eventprocessor.NewModule(projectParser, projectEmbedder, codeAssistant, vsc.NewGithub(s.githubClient), s.kafkaConsumer, serviceConfig.WorkerCount)
+	projectEmbedder := embedder.NewProjectEmbedder(s.embeddingClient, embeddingsRepo, serviceConfig.Embedding.Model)
+	codeAssistant := assistant.NewAssistant(serviceConfig, embeddingsRepo, s.llm, s.embeddingClient)
+	eventProcessor := eventprocessor.NewModule(projectParser, projectEmbedder, codeAssistant, s.vscClient, s.kafkaConsumer, serviceConfig.WorkerCount)
 
 	eventProcessor.Start()
 	err = s.kafkaConsumer.Start()
@@ -79,9 +77,6 @@ func (s *Service) Start() {
 }
 
 func (s *Service) Close() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	s.httpServer.Shutdown(ctx)
 	s.chromaClient.Close()
 	s.kafkaConsumer.Close()
 }
@@ -93,7 +88,7 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 		return errors.New("empty embedding api base url")
 	}
 	embeddingClientConfig.BaseURL = serviceConfig.Embedding.APIBaseURL
-	s.embeddingClient = openai.NewClientWithConfig(embeddingClientConfig)
+	s.embeddingClient = embedder.NewOpenAiEmbeddingClient(openai.NewClientWithConfig(embeddingClientConfig))
 
 	// connect to llm client
 	llm, err := langchainopenai.New(langchainopenai.WithBaseURL(serviceConfig.LLM.APIBaseURL), langchainopenai.WithModel(serviceConfig.LLM.Model), langchainopenai.WithToken(serviceConfig.LLM.OpenApiKey))
@@ -112,7 +107,7 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 	// connect to github
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: serviceConfig.Github.AccessToken})
 	tc := oauth2.NewClient(context.Background(), ts)
-	s.githubClient = github.NewClient(tc)
+	s.vscClient = vsc.NewGithub(github.NewClient(tc))
 
 	// connect to prometheus
 	metrics.Init(serviceConfig.Prometheus.Address)
