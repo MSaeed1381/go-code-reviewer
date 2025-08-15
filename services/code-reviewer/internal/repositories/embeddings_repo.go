@@ -5,6 +5,7 @@ import (
 	"fmt"
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/amikos-tech/chroma-go/pkg/embeddings"
+	"go_code_reviewer/pkg/log"
 	"go_code_reviewer/services/code-reviewer/internal/models"
 )
 
@@ -16,17 +17,27 @@ type EmbeddingsRepository interface {
 const projectIdKey = "project_id"
 
 type EmbeddingRepositoryImpl struct {
-	chromaCollection chroma.Collection
+	ChromaCollection chroma.Collection
 }
 
 func NewEmbeddingRepository(chromaClient chroma.Client, embeddingFunction embeddings.EmbeddingFunction, collectionName string) EmbeddingsRepository {
-	chromaCollection, err := chromaClient.GetOrCreateCollection(context.Background(), collectionName, chroma.WithEmbeddingFunctionCreate(embeddingFunction))
-	if err != nil {
-		panic(err)
+	var chromaCollection chroma.Collection
+	var err error
+
+	if embeddingFunction != nil {
+		chromaCollection, err = chromaClient.GetOrCreateCollection(context.Background(), collectionName, chroma.WithEmbeddingFunctionCreate(embeddingFunction))
+		if err != nil {
+			log.GetLogger().WithError(err).Fatal("failed to get GetOrCreateCollection")
+		}
+	} else {
+		chromaCollection, err = chromaClient.GetOrCreateCollection(context.Background(), collectionName)
+		if err != nil {
+			log.GetLogger().WithError(err).Fatal("failed to get GetOrCreateCollection")
+		}
 	}
 
 	return &EmbeddingRepositoryImpl{
-		chromaCollection: chromaCollection,
+		ChromaCollection: chromaCollection,
 	}
 }
 
@@ -47,7 +58,7 @@ func (p *EmbeddingRepositoryImpl) Add(ctx context.Context, snippets []*models.Sn
 		))
 	}
 
-	return p.chromaCollection.Add(
+	return p.ChromaCollection.Add(
 		ctx,
 		chroma.WithIDs(ids...),
 		chroma.WithEmbeddings(embeddingsList...),
@@ -57,7 +68,7 @@ func (p *EmbeddingRepositoryImpl) Add(ctx context.Context, snippets []*models.Sn
 }
 
 func (p *EmbeddingRepositoryImpl) GetNearestRecord(ctx context.Context, vectorEmbedding []float32, nResult int, projectId string) ([]*models.Snippet, error) {
-	var results, err = p.chromaCollection.Query(
+	var results, err = p.ChromaCollection.Query(
 		ctx,
 		chroma.WithQueryEmbeddings(embeddings.NewEmbeddingFromFloat32(vectorEmbedding)),
 		chroma.WithNResults(nResult),
