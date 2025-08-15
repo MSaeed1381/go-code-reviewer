@@ -43,10 +43,6 @@ Thumbs.db
 # GoReleaser dist output
 dist/
 
-# Mockgen output (if you generate mocks to a specific dir, ignore it)
-mocks/
-mock_*
-
 # Coverage output
 coverage.*
 *.lcov
