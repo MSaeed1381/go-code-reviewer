@@ -55,7 +55,7 @@ func loopSnippet() {
 // --- Snippet 4 ---
 func goroutineSnippet() {
 	go fmt.Println("Running in a goroutine!")
-	time.Sleep(100 * time.Millisecond) // برای صبر کردن قبل از خروج
+	time.Sleep(100 * time.Millisecond)
 }
 
 // --- Snippet 5 ---
