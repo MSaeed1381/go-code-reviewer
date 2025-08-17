@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"fmt"
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/amikos-tech/chroma-go/pkg/embeddings"
 	"go_code_reviewer/pkg/log"
@@ -68,6 +67,7 @@ func (p *EmbeddingRepositoryImpl) Add(ctx context.Context, snippets []*models.Sn
 }
 
 func (p *EmbeddingRepositoryImpl) GetNearestRecord(ctx context.Context, vectorEmbedding []float32, nResult int, projectId string) ([]*models.Snippet, error) {
+	logger := log.GetLogger()
 	var results, err = p.ChromaCollection.Query(
 		ctx,
 		chroma.WithQueryEmbeddings(embeddings.NewEmbeddingFromFloat32(vectorEmbedding)),
@@ -94,8 +94,7 @@ func (p *EmbeddingRepositoryImpl) GetNearestRecord(ctx context.Context, vectorEm
 			Language: language,
 		})
 
-		fmt.Println(doc.ContentString())
-		fmt.Println("-------")
+		logger.Infof("get nearest document: %s", doc.ContentString())
 	}
 
 	return snippets, nil
