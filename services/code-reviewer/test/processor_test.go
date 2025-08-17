@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tmc/langchaingo/llms"
 	"go.uber.org/mock/gomock"
-	"go_code_reviewer/services/api-gateway/pkg/models"
 	"go_code_reviewer/services/code-reviewer/internal/embedder"
 	"go_code_reviewer/services/code-reviewer/internal/mocks"
 	"go_code_reviewer/services/code-reviewer/testkit"
@@ -24,16 +23,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 	service.KafkaConsumer.EXPECT().Channel().Return(ch).AnyTimes()
 
 	llmReview := "reject"
-	prEvent := &models.PullRequestEvent{
-		Owner:    "MSaeed1381",
-		Repo:     "message-broker",
-		Number:   51,
-		CloneURL: "https://github.com/MSaeed1381/message-broker.git",
-		Branch:   "MSaeed1381-patch-52",
-		Title:    "Update main.go",
-		Author:   "MSaeed1381",
-		DiffURL:  "https://github.com/MSaeed1381/message-broker/pull/51.diff",
-	}
+	prEvent := testkit.GenerateRandomPullRequestEvent()
 	diffContent := `"+fmt.Println("Hello, Word!")\n-fmt.Println("Hello, World!")"`
 	diffEmbedding := []float32{2, 4, 2}
 	mainEmbedding := []float32{1, 2, 4}
@@ -83,8 +73,10 @@ func main() {
 		gomock.Any()).Return(queryResult, nil).Times(1)
 
 	queryResult.EXPECT().GetDocumentsGroups().Times(1)
-	service.LLM.EXPECT().GenerateContent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&llms.ContentResponse{
-		Choices: []*llms.ContentChoice{{Content: llmReview}}}, nil).Times(1)
+	service.LLM.EXPECT().
+		GenerateContent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(&llms.ContentResponse{
+			Choices: []*llms.ContentChoice{{Content: llmReview}}}, nil).Times(1)
 	service.VSCClient.EXPECT().PostPRComment(gomock.Any(), prEvent.Number, llmReview, prEvent.Owner, prEvent.Repo).Return(nil).Times(1)
 	service.KafkaConsumer.EXPECT().CommitMessage(kafkaMessage).Return(nil).Times(1)
 

@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"errors"
-	"github.com/google/go-github/v58/github"
 	"go_code_reviewer/pkg/kafka"
 	"go_code_reviewer/pkg/log"
 	"go_code_reviewer/services/api-gateway/api"
@@ -15,7 +14,6 @@ import (
 
 type Service struct {
 	httpServer    *http.Server
-	githubClient  *github.Client
 	kafkaProducer kafka.Producer
 }
 

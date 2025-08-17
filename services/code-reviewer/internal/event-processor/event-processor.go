@@ -3,6 +3,7 @@ package event_processor
 import (
 	"context"
 	"encoding/json"
+	"github.com/sirupsen/logrus"
 	"go_code_reviewer/pkg/kafka"
 	"go_code_reviewer/pkg/log"
 	"go_code_reviewer/services/api-gateway/pkg/models"
@@ -64,10 +65,13 @@ func (m *Module) Start() {
 }
 
 func (m *Module) process(event *models.PullRequestEvent) error {
-	logger := log.GetLogger()
+	logger := log.GetLogger().WithFields(logrus.Fields{
+		"clone_url": event.CloneURL,
+		"branch":    event.Branch,
+	})
 	logger.Infof("processing pull request number = %v", event.Number)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	repoPath, cleanup, err := m.versionControl.Clone(ctx, event.CloneURL, event.Branch)
@@ -98,6 +102,11 @@ func (m *Module) process(event *models.PullRequestEvent) error {
 	if err != nil {
 		logger.WithError(err).Error("failed to download url")
 		return err
+	}
+
+	if diff == "" {
+		logger.Warn("no diff file is empty")
+		return nil
 	}
 
 	review, err := m.codeAssistant.PerformTask(ctx, assistant.TaskCodeReview, diff, models.GetProjectIdentifier(event))

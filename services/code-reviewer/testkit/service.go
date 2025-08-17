@@ -4,6 +4,7 @@ import (
 	"go.uber.org/mock/gomock"
 	kafkamocks "go_code_reviewer/pkg/kafka/mocks"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/services/api-gateway/pkg/models"
 	"go_code_reviewer/services/code-reviewer/internal/assistant"
 	"go_code_reviewer/services/code-reviewer/internal/config"
 	"go_code_reviewer/services/code-reviewer/internal/embedder"
@@ -61,5 +62,18 @@ func (s *Service) Start() {
 	err = s.KafkaConsumer.Start()
 	if err != nil {
 		logger.WithError(err).Fatal("failed to start kafka consumer")
+	}
+}
+
+func GenerateRandomPullRequestEvent() *models.PullRequestEvent {
+	return &models.PullRequestEvent{
+		Owner:    "MSaeed1381",
+		Repo:     "message-broker",
+		Number:   51,
+		CloneURL: "https://github.com/MSaeed1381/message-broker.git",
+		Branch:   "MSaeed1381-patch-52",
+		Title:    "Update main.go",
+		Author:   "MSaeed1381",
+		DiffURL:  "https://github.com/MSaeed1381/message-broker/pull/51.diff",
 	}
 }
