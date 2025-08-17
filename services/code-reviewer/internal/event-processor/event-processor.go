@@ -105,7 +105,7 @@ func (m *Module) process(event *models.PullRequestEvent) error {
 	}
 
 	if diff == "" {
-		logger.Warn("no diff file is empty")
+		logger.Warn("diff file is empty")
 		return nil
 	}
 

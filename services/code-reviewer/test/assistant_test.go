@@ -15,6 +15,7 @@ import (
 	"go_code_reviewer/services/code-reviewer/internal/mocks"
 	"go_code_reviewer/services/code-reviewer/internal/models"
 	mockrepositories "go_code_reviewer/services/code-reviewer/internal/repositories/mocks"
+	"go_code_reviewer/services/code-reviewer/testkit"
 	"testing"
 )
 
@@ -38,24 +39,33 @@ func TestAssistant_PerformTask_Success(t *testing.T) {
 		LLM: config.LLMSection{MaxTokens: 100},
 	}
 
+	code := `"func main() {}"`
+	filename := "main.go"
+	llmMessages, err := testkit.GenerateLLMMessageContents(mockLLM, cfg.Tasks.CodeReview.Prompts.ZeroShot, queryText, code, filename)
+	require.NoError(t, err)
+
 	assistantModule := assistant.NewAssistant(cfg, mockRepo, mockLLM, mockEmbeddingClient)
+
 	mockEmbeddingClient.EXPECT().
 		CreateEmbeddings(ctx, string(openai.SmallEmbedding3), []string{queryText}).
 		Return([]embedder.Embedding{{Embedding: []float32{0.1, 0.2}}}, nil)
 
+	returnedSnippets := []*models.Snippet{{Content: code, Filename: filename}}
 	mockRepo.EXPECT().
 		GetNearestRecord(ctx, []float32{0.1, 0.2}, 5, projectID).
-		Return([]*models.Snippet{{Content: "func main() {}", Filename: "main.go"}}, nil)
+		Return(returnedSnippets, nil)
 
+	llmResponse := "The code looks good!"
 	mockLLM.EXPECT().
-		GenerateContent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		GenerateContent(ctx, llmMessages, gomock.Any()).
 		Return(&llms.ContentResponse{
-			Choices: []*llms.ContentChoice{{Content: "The code looks good!"}}}, nil).Times(1)
+			Choices: []*llms.ContentChoice{{Content: llmResponse}},
+		}, nil).
+		Times(1)
 
 	response, err := assistantModule.PerformTask(ctx, assistant.TaskCodeReview, queryText, projectID)
-
 	require.NoError(t, err)
-	assert.Equal(t, "The code looks good!", response)
+	assert.Equal(t, llmResponse, response)
 }
 
 func TestAssistant_PerformTask_RepositoryError(t *testing.T) {

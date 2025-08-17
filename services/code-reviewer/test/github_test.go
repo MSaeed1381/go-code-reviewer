@@ -21,6 +21,7 @@ func TestDownloadUrl_Success(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "application/vnd.github.v3.diff", r.Header.Get("Accept"))
+		assert.Equal(t, "GET", r.Method)
 
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, expectedDiff)
@@ -35,6 +36,7 @@ func TestDownloadUrl_Success(t *testing.T) {
 
 func TestDownloadUrl_Error(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "GET", r.Method)
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "Not Found")
 	}))
@@ -56,17 +58,17 @@ func TestClone_Success(t *testing.T) {
 	require.NotNil(t, cleanup)
 
 	_, err = os.Stat(dir)
-	assert.False(t, os.IsNotExist(err), "Directory should exist after clone")
+	assert.False(t, os.IsNotExist(err), "directory should exist after clone")
 
 	gitDirInfo, err := os.Stat(filepath.Join(dir, ".git"))
 	assert.NoError(t, err, ".git directory should exist")
 	assert.True(t, gitDirInfo.IsDir())
 
 	err = cleanup()
-	assert.NoError(t, err, "Cleanup should not return an error")
+	assert.NoError(t, err, "cleanup should not return an error")
 
 	_, err = os.Stat(dir)
-	assert.True(t, os.IsNotExist(err), "Directory should not exist after cleanup")
+	assert.True(t, os.IsNotExist(err), "directory should not exist after cleanup")
 }
 
 func TestPostPRComment_Success(t *testing.T) {
