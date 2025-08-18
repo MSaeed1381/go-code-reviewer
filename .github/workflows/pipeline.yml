@@ -85,7 +85,8 @@ jobs:
               echo "Directory '${SERVICE_DIR}' found. Running tests..."
               cd $SERVICE_DIR
             
-              go test -v -cover ./test/... -coverpkg=./...
+              go test -v -cover ./test/... -coverpkg=./... -coverprofile=coverage.out
+              go tool cover -func=coverage.out
             
               echo "Tests completed."
             else
