@@ -53,13 +53,8 @@ func (a *Assistant) PerformTask(ctx context.Context, task Task, queryText, proje
 
 func (a *Assistant) getContextFromChroma(ctx context.Context, projectId, queryText string) (string, error) {
 	logger := log.GetLogger()
-	retrier := retry.New[[]embedder.Embedding](retry.Options{
-		MaxRetries: 5,
-		Strategy:   retry.ExponentialJitterBackoff(500*time.Millisecond, 10*time.Second),
-	})
-	resp, err := retrier.Do(ctx, func() ([]embedder.Embedding, error) {
-		return a.embeddingClient.CreateEmbeddings(ctx, string(openai.SmallEmbedding3), []string{queryText})
-	})
+
+	resp, err := a.embeddingClient.CreateEmbeddings(ctx, string(openai.SmallEmbedding3), []string{queryText})
 	if err != nil {
 		logger.WithError(err).Error("failed to create embeddings")
 		return "", err

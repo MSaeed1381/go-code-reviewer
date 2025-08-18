@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/sashabaranov/go-openai"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/pkg/retry"
 )
 
 type Embedding struct {
@@ -16,12 +17,27 @@ type EmbeddingClient interface {
 
 type OpenAiEmbeddingClient struct {
 	openaiClient *openai.Client
+	retrier      retry.Retrier[openai.EmbeddingResponse]
 }
 
-func NewOpenAiEmbeddingClient(openaiClient *openai.Client) EmbeddingClient {
-	return &OpenAiEmbeddingClient{
+type OpenAiEmbeddingOption func(client *OpenAiEmbeddingClient)
+
+func WithRetrier(retrier retry.Retrier[openai.EmbeddingResponse]) OpenAiEmbeddingOption {
+	return func(client *OpenAiEmbeddingClient) {
+		client.retrier = retrier
+	}
+}
+
+func NewOpenAiEmbeddingClient(openaiClient *openai.Client, opts ...OpenAiEmbeddingOption) EmbeddingClient {
+	client := &OpenAiEmbeddingClient{
 		openaiClient: openaiClient,
 	}
+
+	for _, opt := range opts {
+		opt(client)
+	}
+
+	return client
 }
 
 func (e *OpenAiEmbeddingClient) CreateEmbeddings(ctx context.Context, embeddingModel string, texts []string) ([]Embedding, error) {
@@ -30,7 +46,10 @@ func (e *OpenAiEmbeddingClient) CreateEmbeddings(ctx context.Context, embeddingM
 		Input: texts,
 		Model: openai.EmbeddingModel(embeddingModel),
 	}
-	resp, err := e.openaiClient.CreateEmbeddings(ctx, req)
+
+	resp, err := e.retrier.Do(ctx, func() (openai.EmbeddingResponse, error) {
+		return e.openaiClient.CreateEmbeddings(ctx, req)
+	})
 	if err != nil {
 		logger.WithError(err).Error("failed to call openai to create embedding")
 		return nil, err
