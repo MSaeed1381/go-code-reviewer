@@ -76,18 +76,19 @@ jobs:
 
       - name: Run tests for the specific service
         run: |
-          SERVICE_NAME="${{ needs.prepare.outputs.service_name }}"
-          echo "Service to test: ${SERVICE_NAME}"
-          
-          SERVICE_DIR="services/${SERVICE_NAME}"
-          TEST_DIR="$SERVICE_DIR/test"
-          
-          if [ -d "$SERVICE_DIR" ]; then
-            echo "Directory '${SERVICE_DIR}' found. Running tests..."
-            cd $TEST_DIR
-            go test -v -coverpkg=$SERVICE_DIR/... ./...
-            echo "Tests completed."
-          else
-            echo "Error: Directory '${SERVICE_DIR}' not found!"
-            exit 1
-          fi
+            SERVICE_NAME="${{ needs.prepare.outputs.service_name }}"
+            echo "Service to test: ${SERVICE_NAME}"
+            
+            SERVICE_DIR="services/${SERVICE_NAME}"
+            
+            if [ -d "$SERVICE_DIR" ]; then
+              echo "Directory '${SERVICE_DIR}' found. Running tests..."
+              cd $SERVICE_DIR
+            
+              go test -v -cover ./test/... -coverpkg=./...
+            
+              echo "Tests completed."
+            else
+              echo "Error: Directory '${SERVICE_DIR}' not found!"
+              exit 1
+            fi
