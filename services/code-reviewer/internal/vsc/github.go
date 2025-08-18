@@ -78,8 +78,11 @@ func (g *Github) Clone(ctx context.Context, url, branch string) (string, func() 
 		return os.RemoveAll(dir)
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "clone", "--depth=1", "--branch", branch, url, dir)
-	_, err = cmd.CombinedOutput()
+	_, err = g.retrier.Do(ctx, func() (*http.Response, error) {
+		cmd := exec.CommandContext(ctx, "git", "clone", "--depth=1", "--branch", branch, url, dir)
+		_, err = cmd.CombinedOutput()
+		return nil, err
+	})
 	if err != nil {
 		_ = cleanup()
 		return "", nil, err
@@ -92,10 +95,7 @@ func (g *Github) PostPRComment(ctx context.Context, prNumber int, body, owner, r
 	comment := &github.IssueComment{Body: &body}
 	_, err := g.retrier.Do(ctx, func() (*http.Response, error) {
 		_, _, err := g.githubClient.Issues.CreateComment(ctx, owner, repo, prNumber, comment)
-		if err != nil {
-			return nil, err
-		}
-		return nil, nil
+		return nil, err
 	})
 	if err != nil {
 		return err
