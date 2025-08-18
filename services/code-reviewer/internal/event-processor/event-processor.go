@@ -103,7 +103,6 @@ func (m *Module) process(event *models.PullRequestEvent) error {
 		logger.WithError(err).Error("failed to download url")
 		return err
 	}
-
 	if diff == "" {
 		logger.Warn("diff file is empty")
 		return nil

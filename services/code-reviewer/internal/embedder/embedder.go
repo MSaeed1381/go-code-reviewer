@@ -3,8 +3,10 @@ package embedder
 import (
 	"context"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/pkg/retry"
 	"go_code_reviewer/services/code-reviewer/internal/models"
 	"go_code_reviewer/services/code-reviewer/internal/repositories"
+	"time"
 )
 
 type ProjectEmbedder struct {
@@ -28,7 +30,13 @@ func (p *ProjectEmbedder) EmbedProject(ctx context.Context, projectId string, sn
 		texts = append(texts, snippet.Content)
 	}
 
-	embeddings, err := p.embeddingClient.CreateEmbeddings(ctx, p.embeddingModel, texts)
+	var retrier = retry.New[[]Embedding](retry.Options{
+		MaxRetries: 3,
+		Strategy:   retry.ExponentialJitterBackoff(500*time.Millisecond, 10*time.Second),
+	})
+	embeddings, err := retrier.Do(ctx, func() ([]Embedding, error) {
+		return p.embeddingClient.CreateEmbeddings(ctx, p.embeddingModel, texts)
+	})
 	if err != nil {
 		logger.WithError(err).Error("failed to create embeddings")
 		return err

@@ -8,10 +8,12 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/prompts"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/pkg/retry"
 	"go_code_reviewer/services/code-reviewer/internal/config"
 	"go_code_reviewer/services/code-reviewer/internal/embedder"
 	"go_code_reviewer/services/code-reviewer/internal/repositories"
 	"strings"
+	"time"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -51,8 +53,13 @@ func (a *Assistant) PerformTask(ctx context.Context, task Task, queryText, proje
 
 func (a *Assistant) getContextFromChroma(ctx context.Context, projectId, queryText string) (string, error) {
 	logger := log.GetLogger()
-
-	resp, err := a.embeddingClient.CreateEmbeddings(ctx, string(openai.SmallEmbedding3), []string{queryText})
+	retrier := retry.New[[]embedder.Embedding](retry.Options{
+		MaxRetries: 5,
+		Strategy:   retry.ExponentialJitterBackoff(500*time.Millisecond, 10*time.Second),
+	})
+	resp, err := retrier.Do(ctx, func() ([]embedder.Embedding, error) {
+		return a.embeddingClient.CreateEmbeddings(ctx, string(openai.SmallEmbedding3), []string{queryText})
+	})
 	if err != nil {
 		logger.WithError(err).Error("failed to create embeddings")
 		return "", err
@@ -105,11 +112,17 @@ func (a *Assistant) callLLMToPerformTask(ctx context.Context, task Task, queryTe
 	}
 	logger.WithField("prompt", prompt.String()).Info("prompt created")
 
-	result, err := chains.Predict(ctx, chain, map[string]any{
-		"text":     queryText,
-		"context":  contextString,
-		"language": language,
-	}, chains.WithMaxTokens(a.config.LLM.MaxTokens))
+	retrier := retry.New[string](retry.Options{
+		MaxRetries: 5,
+		Strategy:   retry.ExponentialJitterBackoff(500*time.Millisecond, 10*time.Second),
+	})
+	result, err := retrier.Do(ctx, func() (string, error) {
+		return chains.Predict(ctx, chain, map[string]any{
+			"text":     queryText,
+			"context":  contextString,
+			"language": language,
+		}, chains.WithMaxTokens(a.config.LLM.MaxTokens))
+	})
 	if err != nil {
 		logger.WithError(err).Error("failed to call llm")
 		return "", err

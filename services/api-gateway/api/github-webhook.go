@@ -26,13 +26,14 @@ func (h *Handler) githubWebhook(c *gin.Context) {
 
 	switch e := githubEvent.(type) {
 	case *github.PullRequestEvent:
-		event := convertGitHubEvent(e)
-		if event == nil {
+		event, ok := convertGitHubEvent(e)
+		if !ok {
 			h.handleErrorApiResponse(c, err, "failed to convert github event")
 			return
 		}
 		logger.Infof("Received pull request event %v", event)
-		err = h.module.ProcessEvent(event)
+
+		err = h.module.ProcessEvent(c, event)
 		if err != nil {
 			h.handleErrorApiResponse(c, err, "failed to send event to kafka")
 			return
@@ -45,14 +46,14 @@ func (h *Handler) githubWebhook(c *gin.Context) {
 	h.handleSuccessfulApiResponse(c, "event not found")
 }
 
-func convertGitHubEvent(event *github.PullRequestEvent) *models.PullRequestEvent {
+func convertGitHubEvent(event *github.PullRequestEvent) (*models.PullRequestEvent, bool) {
 	if event == nil || event.PullRequest == nil || event.Repo == nil || event.Repo.Owner == nil {
-		return nil
+		return nil, false
 	}
 
 	parts := strings.Split(event.GetRepo().GetFullName(), "/")
 	if len(parts) != 2 {
-		return nil
+		return nil, false
 	}
 
 	return &models.PullRequestEvent{
@@ -64,5 +65,5 @@ func convertGitHubEvent(event *github.PullRequestEvent) *models.PullRequestEvent
 		Title:    event.GetPullRequest().GetTitle(),
 		Author:   event.GetPullRequest().GetUser().GetLogin(),
 		DiffURL:  event.GetPullRequest().GetDiffURL(),
-	}
+	}, true
 }
