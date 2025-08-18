@@ -84,7 +84,7 @@ jobs:
           if [ -d "$SERVICE_DIR" ]; then
             echo "Directory '${SERVICE_DIR}' found. Running tests..."
             cd $SERVICE_DIR
-            go test -v -cover ./...
+            go test -v -coverpkg=./... -cover ./...
             echo "Tests completed."
           else
             echo "Error: Directory '${SERVICE_DIR}' not found!"
