@@ -63,7 +63,7 @@ jobs:
           fi
 
   test:
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
