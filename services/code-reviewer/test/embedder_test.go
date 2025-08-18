@@ -75,7 +75,7 @@ func TestProjectEmbedder_EmbedProject_EmbeddingClientError(t *testing.T) {
 	mockEmbeddingClient.EXPECT().
 		CreateEmbeddings(ctx, "text-embedding-ada-002", texts).
 		Return(nil, expectedError).
-		Times(1)
+		Times(3)
 
 	mockEmbeddingsRepo.EXPECT().Add(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	err := projectEmbedder.EmbedProject(ctx, projectID, snippets)
