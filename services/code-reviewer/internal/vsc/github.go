@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/go-github/v58/github"
+	"go_code_reviewer/pkg/retry"
 	"io"
 	"net/http"
 	"os"
@@ -12,12 +13,31 @@ import (
 
 type Github struct {
 	githubClient *github.Client
+	retrier      retry.Retrier[*http.Response]
 }
 
-func NewGithub(githubClient *github.Client) VersionControlSystem {
-	return &Github{
+type GithubOption func(github *Github)
+
+func WithRetry(retrier retry.Retrier[*http.Response]) GithubOption {
+	return func(github *Github) {
+		github.retrier = retrier
+	}
+}
+
+func NewGithub(githubClient *github.Client, opts ...GithubOption) VersionControlSystem {
+	g := &Github{
 		githubClient: githubClient,
 	}
+
+	for _, opt := range opts {
+		opt(g)
+	}
+
+	if g.retrier == nil {
+		g.retrier = retry.New[*http.Response](retry.Options{MaxRetries: 1})
+	}
+
+	return g
 }
 
 func (g *Github) DownloadUrl(ctx context.Context, url string) (string, error) {
@@ -27,7 +47,9 @@ func (g *Github) DownloadUrl(ctx context.Context, url string) (string, error) {
 	}
 
 	req.Header.Set("Accept", "application/vnd.github.v3.diff")
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := g.retrier.Do(ctx, func() (*http.Response, error) {
+		return http.DefaultClient.Do(req)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -68,7 +90,13 @@ func (g *Github) Clone(ctx context.Context, url, branch string) (string, func() 
 
 func (g *Github) PostPRComment(ctx context.Context, prNumber int, body, owner, repo string) error {
 	comment := &github.IssueComment{Body: &body}
-	_, _, err := g.githubClient.Issues.CreateComment(ctx, owner, repo, prNumber, comment)
+	_, err := g.retrier.Do(ctx, func() (*http.Response, error) {
+		_, _, err := g.githubClient.Issues.CreateComment(ctx, owner, repo, prNumber, comment)
+		if err != nil {
+			return nil, err
+		}
+		return nil, nil
+	})
 	if err != nil {
 		return err
 	}

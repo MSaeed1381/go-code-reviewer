@@ -22,6 +22,7 @@ import (
 	"go_code_reviewer/services/code-reviewer/internal/repositories"
 	"go_code_reviewer/services/code-reviewer/internal/vsc"
 	"golang.org/x/oauth2"
+	"net/http"
 	"time"
 )
 
@@ -112,7 +113,10 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 	// connect to github
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: serviceConfig.Github.AccessToken})
 	tc := oauth2.NewClient(context.Background(), ts)
-	s.vscClient = vsc.NewGithub(github.NewClient(tc))
+	s.vscClient = vsc.NewGithub(github.NewClient(tc), vsc.WithRetry(retry.New[*http.Response](retry.Options{
+		MaxRetries: 3,
+		Strategy:   retry.ExponentialJitterBackoff(500*time.Millisecond, 10*time.Second),
+	})))
 
 	// connect to prometheus
 	metrics.Init(serviceConfig.Prometheus.Address)
