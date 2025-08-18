@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       service_name: ${{ steps.get_service.outputs.service_name }}
-      should_run: ${{ steps.get_service.outputs.service_name != '' }}
 
     steps:
       - name: Checkout code
@@ -24,14 +23,18 @@ jobs:
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
           
-          SERVICE_NAME=$(echo "$COMMIT_MSG" | grep -oP '^[a-zA-Z]+\(\K[^\)]+' || true)
+          SERVICE_NAME=$(echo "$COMMIT_MSG" | grep -oP '^[a-zA-Z]+\(\K[^\)]+')
+          
+          if [ -z "$SERVICE_NAME" ]; then
+            echo "Invalid commit message format. Expected something like: feat(service-name): description"
+            exit 1
+          fi
           
           echo "Extracted service name: '${SERVICE_NAME}'"
           echo "service_name=${SERVICE_NAME}" >> $GITHUB_OUTPUT
 
   build:
     needs: prepare
-    if: needs.prepare.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -60,8 +63,7 @@ jobs:
           fi
 
   test:
-    needs: prepare
-    if: needs.prepare.outputs.should_run == 'true'
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -82,7 +84,7 @@ jobs:
           if [ -d "$SERVICE_DIR" ]; then
             echo "Directory '${SERVICE_DIR}' found. Running tests..."
             cd $SERVICE_DIR
-            go test -v ./...
+            go test -v -cover ./...
             echo "Tests completed."
           else
             echo "Error: Directory '${SERVICE_DIR}' not found!"
