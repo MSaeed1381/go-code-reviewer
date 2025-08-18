@@ -27,7 +27,7 @@ func (p *ProjectEmbedder) EmbedProject(ctx context.Context, projectId string, sn
 	for _, snippet := range snippets {
 		texts = append(texts, snippet.Content)
 	}
-
+	
 	embeddings, err := p.embeddingClient.CreateEmbeddings(ctx, p.embeddingModel, texts)
 	if err != nil {
 		logger.WithError(err).Error("failed to create embeddings")

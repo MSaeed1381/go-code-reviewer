@@ -28,7 +28,7 @@ func TestDownloadUrl_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	g := &vsc.Github{}
+	g := vsc.NewGithub(nil)
 	actualDiff, err := g.DownloadUrl(context.Background(), server.URL)
 	require.NoError(t, err)
 	assert.Equal(t, expectedDiff, actualDiff)
@@ -42,7 +42,7 @@ func TestDownloadUrl_Error(t *testing.T) {
 	}))
 	defer server.Close()
 
-	g := &vsc.Github{}
+	g := vsc.NewGithub(nil)
 	_, err := g.DownloadUrl(context.Background(), server.URL)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unexpected response: 404")
@@ -52,7 +52,7 @@ func TestClone_Success(t *testing.T) {
 	repoURL := "https://github.com/git-fixtures/basic.git"
 	branch := "master"
 
-	g := &vsc.Github{}
+	g := vsc.NewGithub(nil)
 	dir, cleanup, err := g.Clone(context.Background(), repoURL, branch)
 	require.NoError(t, err)
 	require.NotNil(t, cleanup)

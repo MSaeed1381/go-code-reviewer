@@ -12,6 +12,7 @@ import (
 	langchainopenai "github.com/tmc/langchaingo/llms/openai"
 	"go_code_reviewer/pkg/kafka"
 	"go_code_reviewer/pkg/log"
+	"go_code_reviewer/pkg/retry"
 	"go_code_reviewer/services/code-reviewer/internal/assistant"
 	"go_code_reviewer/services/code-reviewer/internal/config"
 	"go_code_reviewer/services/code-reviewer/internal/embedder"
@@ -21,6 +22,8 @@ import (
 	"go_code_reviewer/services/code-reviewer/internal/repositories"
 	"go_code_reviewer/services/code-reviewer/internal/vsc"
 	"golang.org/x/oauth2"
+	"net/http"
+	"time"
 )
 
 type Service struct {
@@ -88,7 +91,10 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 		return errors.New("empty embedding api base url")
 	}
 	embeddingClientConfig.BaseURL = serviceConfig.Embedding.APIBaseURL
-	s.embeddingClient = embedder.NewOpenAiEmbeddingClient(openai.NewClientWithConfig(embeddingClientConfig))
+	s.embeddingClient = embedder.NewOpenAiEmbeddingClient(openai.NewClientWithConfig(embeddingClientConfig), embedder.WithRetrier(retry.New[openai.EmbeddingResponse](retry.Options{
+		MaxRetries: 3,
+		Strategy:   retry.ExponentialJitterBackoff(500*time.Millisecond, 10*time.Second),
+	})))
 
 	// connect to llm client
 	llm, err := langchainopenai.New(langchainopenai.WithBaseURL(serviceConfig.LLM.APIBaseURL), langchainopenai.WithModel(serviceConfig.LLM.Model), langchainopenai.WithToken(serviceConfig.LLM.OpenApiKey))
@@ -107,7 +113,10 @@ func (s *Service) ConnectToServices(serviceConfig *config.Config) error {
 	// connect to github
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: serviceConfig.Github.AccessToken})
 	tc := oauth2.NewClient(context.Background(), ts)
-	s.vscClient = vsc.NewGithub(github.NewClient(tc))
+	s.vscClient = vsc.NewGithub(github.NewClient(tc), vsc.WithRetry(retry.New[*http.Response](retry.Options{
+		MaxRetries: 3,
+		Strategy:   retry.ExponentialJitterBackoff(500*time.Millisecond, 10*time.Second),
+	})))
 
 	// connect to prometheus
 	metrics.Init(serviceConfig.Prometheus.Address)

@@ -7,7 +7,7 @@ import (
 	"go_code_reviewer/pkg/log"
 	"go_code_reviewer/services/api-gateway/api"
 	"go_code_reviewer/services/api-gateway/internal/config"
-	eventprocessor "go_code_reviewer/services/api-gateway/internal/event-processor"
+	eventprocessor "go_code_reviewer/services/api-gateway/internal/event-sender"
 	"net/http"
 	"time"
 )
