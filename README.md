@@ -38,15 +38,16 @@ The system is designed as a distributed, event-driven application composed of tw
 
 ## Technology Stack
 
-| Category                  | Technology                           |
-| ------------------------- |--------------------------------------|
-| **Backend** | Golang                               |
-| **API Framework** | Gin                                  |
-| **Messaging Broker** | Apache Kafka                         |
-| **Vector Database** | ChromaDB                             |
-| **AI / LLM Orchestration**| LangChainGo, OpenAI                  |
-| **Containerization** | Docker, Docker Compose, Docker Swarm |
-| **Observability** | Prometheus, Grafana                  |
+| Category                   | Technology                           |
+|----------------------------|--------------------------------------|
+| **Backend**                | Golang                               |
+| **API Framework**          | Gin                                  |
+| **Messaging Broker**       | Apache Kafka                         |
+| **Vector Database**        | ChromaDB                             |
+| **AI / LLM Orchestration** | LangChainGo, OpenAI                  |
+| **Containerization**       | Docker, Docker Compose, Docker Swarm |
+| **Observability**          | Prometheus, Grafana                  |
+| **Log**                    | Elastic Search, Kibana               |
 
 ## 🚀 Getting Started
 
@@ -61,8 +62,8 @@ You can run the entire system locally using Docker Compose.
 
 1.  **Clone the repository:**
     ```sh
-    git clone <your-repo-url>
-    cd <your-repo-directory>
+    git clone git@github.com:MSaeed1381/go-code-reviewer.git
+    cd deployments
     ```
 
 2.  **Configure Environment Variables:**
@@ -93,3 +94,4 @@ You can run the entire system locally using Docker Compose.
 The project has a comprehensive test suite covering unit, integration, and end-to-end scenarios. To run all tests:
 ```sh
 go test ./...
+```
