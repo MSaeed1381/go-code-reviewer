@@ -36,6 +36,7 @@ The system is designed as a distributed, event-driven application composed of tw
     4.  **Retrieve & Generate**: Embed the PR diff, find the most relevant code chunks from ChromaDB as context, and send everything to the LLM to generate the review.
     5.  **Comment**: Post the LLM's response back to the original pull request.
 
+![architecture.png](architecture/high_level_architecture.png)
 ## Technology Stack
 
 | Category                   | Technology                           |
