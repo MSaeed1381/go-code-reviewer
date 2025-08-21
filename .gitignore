@@ -33,7 +33,6 @@ Thumbs.db
 
 # Local dev tools
 .env
-.env.*
 *.local
 *.secret
 
