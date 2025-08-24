@@ -42,7 +42,7 @@ func (a *Assistant) PerformTask(ctx context.Context, task Task, queryText, proje
 		return "", err
 	}
 
-	response, err := a.callLLMToPerformTask(ctx, task, queryText, contextString, "go")
+	response, err := a.callLLMToPerformTask(ctx, task, queryText, contextString)
 	if err != nil {
 		logger.WithError(err).Error("failed to query LLM")
 		return "", err
@@ -76,7 +76,7 @@ func (a *Assistant) getContextFromChroma(ctx context.Context, projectId, queryTe
 	return contextBuilder.String(), nil
 }
 
-func (a *Assistant) callLLMToPerformTask(ctx context.Context, task Task, queryText, contextString, language string) (string, error) {
+func (a *Assistant) callLLMToPerformTask(ctx context.Context, task Task, queryText, contextString string) (string, error) {
 	logger := log.GetLogger()
 	logger.WithFields(logrus.Fields{
 		"query":   queryText,
@@ -99,7 +99,7 @@ func (a *Assistant) callLLMToPerformTask(ctx context.Context, task Task, queryTe
 	prompt, err := chain.Prompt.FormatPrompt(map[string]any{
 		"text":     queryText,
 		"context":  contextString,
-		"language": language,
+		"language": "go",
 	})
 	if err != nil {
 		logger.WithError(err).Error("failed to format prompt")
@@ -115,7 +115,7 @@ func (a *Assistant) callLLMToPerformTask(ctx context.Context, task Task, queryTe
 		return chains.Predict(ctx, chain, map[string]any{
 			"text":     queryText,
 			"context":  contextString,
-			"language": language,
+			"language": "go",
 		}, chains.WithMaxTokens(a.config.LLM.MaxTokens))
 	})
 	if err != nil {
